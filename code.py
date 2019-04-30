@@ -51,6 +51,34 @@ class Area():
         self.yrange = (1, y)
         self.screen = pygame.display.set_mode(grid_to_pixel(self.xrange[1]+1.5, self.yrange[1]+1.5))
 
+def get_paths(unit, sprites, area):
+    paths = [(unit.x, unit.y)]
+    directions = [(-1, 0), (0, -1), (1, 0), (0, 1)]
+    for p in paths:
+        # distance under current path from origin
+        dx = p[0] - paths[0][0]
+        dy = p[1] - paths[0][1]
+        if abs(dx) + abs(dy) >= unit.stat_move:
+            break
+        for d in directions:
+            tmp = tuple(map(sum, zip(p, d)))
+            try:
+                paths.index(tmp)
+            except:
+                test_flag = True
+                for s in sprites:
+                    if tmp == (s.x, s.y):
+                        test_flag = False
+                if abs(dx) + abs(dy) <= unit.stat_move and \
+                    area.xrange[0] <= tmp[0] and tmp[0] <= area.xrange[1] and \
+                    area.yrange[0] <= tmp[1] and tmp[1] <= area.yrange[1] and \
+                    test_flag:
+                    paths.append(tmp)
+                    pygame.draw.rect(area.screen, (0, 128, 0),
+                        grid_to_pixel(p[0], p[1]) + \
+                        (GRID_TO_PIXEL-5, GRID_TO_PIXEL-5))
+    return paths
+
 
 def main():
     pygame.init()
@@ -70,8 +98,8 @@ def main():
     running = True
 
     one = Character(Type1, "one")
-    one.x = 2
-    one.y = 1
+    one.x = 6
+    one.y = 4
 
     two = Character(Type2, "two")
     two.x = 6
@@ -103,18 +131,19 @@ def main():
                 if pos == (s.x, s.y):
                     tmp_text = str(s.name) + ", move: " + str(s.stat_move)
                     focused = s
+                    paths = get_paths(focused, sprites, area)
 
         if pygame.mouse.get_pressed()[0] and not wait_flag and focused:
             wait_flag = True
             pos = pixel_to_grid(*pygame.mouse.get_pos())
-            for s in sprites:
-                if pos == (s.x, s.y):
-                    focused = None
-                    tmp_text = "cannot move there"
-            if focused:
+            try:
+                paths.index(pos)
                 focused.move_exact(*pos, area)
                 focused = None
                 tmp_text = "nothing selected"
+            except:
+                focused = None
+                tmp_text = "cannot move there"
 
         if pygame.mouse.get_pressed()[2] and not wait_flag and focused:
             wait_flag = True
@@ -129,22 +158,33 @@ def main():
             grid_to_pixel(area.xrange[1]+0.5, area.yrange[1]+0.5))
 
         # Show the possible move options
+        # Teleportation-like
+        #if focused:
+        #    for dx in range(-focused.stat_move, focused.stat_move + 1):
+        #        for dy in range(-focused.stat_move, focused.stat_move + 1):
+        #            tmp_pos = (focused.x - dx, focused.y - dy)
+        #            # Make sure not moving over an existing unit
+        #            for s in sprites:
+        #                if tmp_pos == (s.x, s.y):
+        #                    break
+        #            else:
+        #                # Make sure within bounds and movement range
+        #                if abs(dx) + abs(dy) <= focused.stat_move and \
+        #                    area.xrange[0] <= tmp_pos[0] and tmp_pos[0] <= area.xrange[1] and \
+        #                    area.yrange[0] <= tmp_pos[1] and tmp_pos[1] <= area.yrange[1]:
+        #                    pygame.draw.rect(area.screen, (0, 128, 0),
+        #                        grid_to_pixel(focused.x - dx, focused.y - dy) + \
+        #                        (GRID_TO_PIXEL-5, GRID_TO_PIXEL-5))
+
+        # Show the possible move options
+        # Path-like
         if focused:
-            for dx in range(-focused.stat_move, focused.stat_move + 1):
-                for dy in range(-focused.stat_move, focused.stat_move + 1):
-                    tmp_pos = (focused.x - dx, focused.y - dy)
-                    # Make sure not moving over an existing unit
-                    for s in sprites:
-                        if tmp_pos == (s.x, s.y):
-                            break
-                    else:
-                        # Make sure within bounds and movement range
-                        if abs(dx) + abs(dy) <= focused.stat_move and \
-                            area.xrange[0] <= tmp_pos[0] and tmp_pos[0] <= area.xrange[1] and \
-                            area.yrange[0] <= tmp_pos[1] and tmp_pos[1] <= area.yrange[1]:
-                            pygame.draw.rect(area.screen, (0, 128, 0),
-                                grid_to_pixel(focused.x - dx, focused.y - dy) + \
-                                (GRID_TO_PIXEL-5, GRID_TO_PIXEL-5))
+            paths = get_paths(focused, sprites, area)
+            for p in paths:
+                pygame.draw.rect(area.screen, (0, 128, 0),
+                    grid_to_pixel(p[0], p[1]) + \
+                    (GRID_TO_PIXEL-5, GRID_TO_PIXEL-5))
+
 
         # event handling, gets all event from the event queue
         #one.move(round(random.uniform(-1, 1)/1.99 * 1), round(random.uniform(-1, 1)/1.99 * 1), area)
