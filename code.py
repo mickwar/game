@@ -86,6 +86,7 @@ def main():
     tmp_text = "nothing selected"
     textsurface = myfont.render(str(tmp_text), False, (128, 0, 0))
     focused = None
+    prev_status = 0
     status = 1
      
     # main loop
@@ -105,9 +106,11 @@ def main():
         key = pygame.key.get_pressed()
 
         # Go back one level on ESCAPE key press
-        if key[27] == 1 and status > 0:
-            print("status down")
-            status -= 1
+        if key[27] == 1 and status == 1:
+            status = 0
+
+        if key[27] == 1 and (status == 2 or status == 3):
+            status = 1
 
         # Get next unit's turn
         if focused is None:
@@ -115,21 +118,13 @@ def main():
             focused.get_paths(Units, area)
             status = 1
 
+
         # Moving
         if not pygame.mouse.get_pressed()[0]:
             wait_flag = False
 
-        if pygame.mouse.get_pressed()[0] and not wait_flag and not focused:
-            wait_flag = True
-            pos = pixel_to_grid(*pygame.mouse.get_pos())
-            for s in Units:
-                if pos == (s.x, s.y):
-                    tmp_text = str(s.name) + ", move: " + str(s.base_move)
-                    focused = s
-                    focused.get_paths(Units, area)
-                    #paths = get_paths(focused, Units, area)
 
-        if pygame.mouse.get_pressed()[0] and not wait_flag and focused:
+        if pygame.mouse.get_pressed()[0] and not wait_flag and focused and status == 2:
             wait_flag = True
             pos = pixel_to_grid(*pygame.mouse.get_pos())
             try:
@@ -148,12 +143,14 @@ def main():
             tmp_text = "nothing selected"
 
 
-
+        # Draw the map
         area.screen.fill((16, 16, 16))
         for g in area.grid:
             pygame.draw.rect(area.screen, (48, 48, 48),
                 grid_to_pixel(g[0], g[1]) + \
                 grid_to_pixel(1.5, 1.5))
+
+
 
         # Show the possible move options
         # Teleportation-like
@@ -185,10 +182,16 @@ def main():
 
 
 
-        # event handling, gets all event from the event queue
-        #one.move(round(random.uniform(-1, 1)/1.99 * 1), round(random.uniform(-1, 1)/1.99 * 1), area)
-        for s in Units:
-            area.screen.blit(s.image, grid_to_pixel(s.x, s.y))
+        # Draw the units
+        for u in Units:
+
+            # Highlight current unit
+            if u is focused:
+                pygame.draw.rect(area.screen, (230, 230, 0),
+                    grid_to_pixel(focused.x + 5/GRID_TO_PIXEL, focused.y + 5/GRID_TO_PIXEL) + \
+                    (GRID_TO_PIXEL-10, GRID_TO_PIXEL-10))
+
+            area.screen.blit(u.image, grid_to_pixel(u.x, u.y))
 
         if focused and status == 1:
             r = popup_menu(area, *(grid_to_pixel(focused.x + 1, focused.y - 0.3) + (80, 40)))
@@ -196,7 +199,7 @@ def main():
                 status = 2
             if r[1]:
                 status = 3
-            print(r)
+            #print(r)
 
         #area.screen.blit(one.image, grid_to_pixel(one.x, one.y))
         area.screen.blit(textsurface,(8,4))
