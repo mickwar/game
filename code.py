@@ -21,10 +21,11 @@ def quit_game():
     quit()
 
 # Returns False or the result of running action()
-def button(gameDisplay, msg, x, y, w, h, ic, ac, action = None):
+def button(gameDisplay, msg, x, y, w, h, ic, ac, hotkey = None, action = None):
     # Get mouse position and click status
     mouse = pygame.mouse.get_pos()      # (x, y)
     click = pygame.mouse.get_pressed()  # (LeftClick, MiddleButton, RightClick)
+    key = pygame.key.get_pressed()
 
     # Check if mouse is within the rectangle
     r = False
@@ -35,6 +36,11 @@ def button(gameDisplay, msg, x, y, w, h, ic, ac, action = None):
             r = action() 
     else:
         pygame.draw.rect(gameDisplay, ic, (x, y, w, h))
+
+    # Or execute on hotkey
+    if hotkey is not None and type(hotkey) is str:
+        if key[ord(hotkey)] == 1:
+            r = action()
 
     # Place text in center
     smallText = pygame.font.SysFont("Arial", 20)
@@ -64,8 +70,8 @@ def main_menu():
         gameDisplay.blit(TextSurf, TextRect)
 
         # play_game() returns True, so we want to exit main menu
-        intro = not button(gameDisplay, "Play", 150, 350, 100, 50, (196,0,0), (255,0,0), play_game)
-        button(gameDisplay, "Quit", 350, 350, 100, 50, (196,0,0), (255,0,0), quit_game)
+        intro = not button(gameDisplay, "Play", 150, 350, 100, 50, (196,0,0), (255,0,0), "p", play_game)
+        button(gameDisplay, "Quit", 350, 350, 100, 50, (196,0,0), (255,0,0), "q", quit_game)
 
         pygame.display.update()
         clock.tick(30)
