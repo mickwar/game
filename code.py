@@ -2,27 +2,23 @@ import pygame
 import random
 
 from units import *
+from field import *
 
-GRID_TO_PIXEL = 50
-GRID_OFFSET = 25
-def grid_to_pixel(x, y):
-    return (int((x-1)*GRID_TO_PIXEL + GRID_OFFSET), int((y-1)*GRID_TO_PIXEL + GRID_OFFSET))
 
-def pixel_to_grid(x, y):
-    return (int((x - GRID_OFFSET) / GRID_TO_PIXEL + 1), int((y - GRID_OFFSET) / GRID_TO_PIXEL + 1))
+# Get unit next in turn order
+def unit_order(Units):
+    # Sort first so highest CT will go first
+    sl = sorted(Units, key = lambda x: x.stat_ct, reverse = True)
+    # Check if any unit has CT exceeding 99
+    for u in sl:
+        if u.stat_ct > 99:
+            return u
+    else:
+        # Increase all units CT by SPEED, don't need to use sorted list
+        for u in Units:
+            u.stat_ct += u.base_speed
 
-class Area():
-    def __init__(self, x, y, n = 0):
-        self.xrange = (1, x)
-        self.yrange = (1, y)
-        self.grid = []
-        for i in range(1, x+1):
-            for j in range(1, y+1):
-                self.grid.append((i,j))
-        while n > 0:
-            n = n - 1
-            self.grid.pop(random.randint(0, len(self.grid) - 1))
-        self.screen = pygame.display.set_mode(grid_to_pixel(self.xrange[1]+1.5, self.yrange[1]+1.5))
+        return unit_order(Units)
 
 
 def main():
@@ -37,21 +33,22 @@ def main():
     pygame.display.set_caption("minimal program")
      
     # create a surface on screen that has the size of 240 x 180
-    area = Area(10, 10, 20)
+    area = Field(10, 10, 0)
      
     # define a variable to control the main loop
     running = True
 
-    sprites = []
+    Units = []
     for i in range(6):
         if i % 2 == 0:
-            s = Unit(chr(range(ord('a'), ord('z'))[i]), "blue", Type1, Type2)
+            s = Unit(chr(range(ord('a'), ord('z'))[i]), "blue", Type1)
         if i % 2 == 1:
-            s = Unit(chr(range(ord('a'), ord('z'))[i]), "red", Type2, Type2)
+            s = Unit(chr(range(ord('a'), ord('z'))[i]), "red", Type2)
         tmp = area.grid[random.randint(0, len(area.grid)-1)]
         s.x = tmp[0]
         s.y = tmp[1]
-        sprites.append(s)
+        s.stat_ct += i
+        Units.append(s)
 
 
     tmp_text = "nothing selected"
@@ -67,6 +64,15 @@ def main():
                 # change the value to False, to exit the main loop
                 running = False
 
+
+        #print(unit_order(Units).stat_ct)
+        focused = unit_order(Units)
+        focused.get_paths(Units, area)
+        tmp_text = str(focused.name) + ", move: " + str(focused.base_move)
+        print("")
+        for u in Units:
+            print(str(u.name) + ": " + str(u.stat_ct))
+
         # Moving
         if not pygame.mouse.get_pressed()[0]:
             wait_flag = False
@@ -74,12 +80,12 @@ def main():
         if pygame.mouse.get_pressed()[0] and not wait_flag and not focused:
             wait_flag = True
             pos = pixel_to_grid(*pygame.mouse.get_pos())
-            for s in sprites:
+            for s in Units:
                 if pos == (s.x, s.y):
-                    tmp_text = str(s.name) + ", move: " + str(s.stat_move)
+                    tmp_text = str(s.name) + ", move: " + str(s.base_move)
                     focused = s
-                    focused.get_paths(sprites, area)
-                    #paths = get_paths(focused, sprites, area)
+                    focused.get_paths(Units, area)
+                    #paths = get_paths(focused, Units, area)
 
         if pygame.mouse.get_pressed()[0] and not wait_flag and focused:
             wait_flag = True
@@ -87,6 +93,7 @@ def main():
             try:
                 focused.paths.index(pos)
                 focused.move_exact(*pos, area)
+                focused.stat_ct = max(0, focused.stat_ct - 50)
                 focused = None
                 tmp_text = "nothing selected"
             except:
@@ -109,16 +116,16 @@ def main():
         # Show the possible move options
         # Teleportation-like
         #if focused:
-        #    for dx in range(-focused.stat_move, focused.stat_move + 1):
-        #        for dy in range(-focused.stat_move, focused.stat_move + 1):
+        #    for dx in range(-focused.base_move, focused.base_move + 1):
+        #        for dy in range(-focused.base_move, focused.base_move + 1):
         #            tmp_pos = (focused.x - dx, focused.y - dy)
         #            # Make sure not moving over an existing unit
-        #            for s in sprites:
+        #            for s in Units:
         #                if tmp_pos == (s.x, s.y):
         #                    break
         #            else:
         #                # Make sure within bounds and movement range
-        #                if abs(dx) + abs(dy) <= focused.stat_move and \
+        #                if abs(dx) + abs(dy) <= focused.base_move and \
         #                    area.xrange[0] <= tmp_pos[0] and tmp_pos[0] <= area.xrange[1] and \
         #                    area.yrange[0] <= tmp_pos[1] and tmp_pos[1] <= area.yrange[1]:
         #                    pygame.draw.rect(area.screen, (0, 128, 0),
@@ -128,7 +135,7 @@ def main():
         # Show the possible move options
         # Path-like
         if focused:
-            #paths = get_paths(focused, sprites, area)
+            #paths = get_paths(focused, Units, area)
             for p in focused.paths:
                 pygame.draw.rect(area.screen, (0, 128, 0),
                     grid_to_pixel(p[0] + 5/GRID_TO_PIXEL, p[1] + 5/GRID_TO_PIXEL) + \
@@ -137,7 +144,7 @@ def main():
 
         # event handling, gets all event from the event queue
         #one.move(round(random.uniform(-1, 1)/1.99 * 1), round(random.uniform(-1, 1)/1.99 * 1), area)
-        for s in sprites:
+        for s in Units:
             area.screen.blit(s.image, grid_to_pixel(s.x, s.y))
 
         #area.screen.blit(one.image, grid_to_pixel(one.x, one.y))
