@@ -1,13 +1,15 @@
 import pygame
 import random
 
-#class Character(pygame.sprite.Sprite):
-class Character():
-    def __init__(self, ClassType, name):
+#class Character():
+class Character(pygame.sprite.Sprite):
+    def __init__(self, ClassType, name, color):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = pygame.image.load(color + "_triangle.png")
+        self.rect = self.image.get_rect()
         self.x = 1
         self.y = 1
         self.name = name
-        self.image = pygame.image.load("blue_triangle.png")
         self.stat_atk = 10 + ClassType.s1
         self.stat_hp = 50 + ClassType.s2
         self.stat_move = 3 + ClassType.s3
@@ -46,9 +48,16 @@ def pixel_to_grid(x, y):
     return (int((x - GRID_OFFSET) / GRID_TO_PIXEL + 1), int((y - GRID_OFFSET) / GRID_TO_PIXEL + 1))
 
 class Area():
-    def __init__(self, x, y):
+    def __init__(self, x, y, n = 0):
         self.xrange = (1, x)
         self.yrange = (1, y)
+        self.grid = []
+        for i in range(1, x+1):
+            for j in range(1, y+1):
+                self.grid.append((i,j))
+        while n > 0:
+            n = n - 1
+            self.grid.pop(random.randint(0, len(self.grid) - 1))
         self.screen = pygame.display.set_mode(grid_to_pixel(self.xrange[1]+1.5, self.yrange[1]+1.5))
 
 def get_paths(unit, sprites, area):
@@ -58,25 +67,32 @@ def get_paths(unit, sprites, area):
         # distance under current path from origin
         dx = p[0] - paths[0][0]
         dy = p[1] - paths[0][1]
+        # Break out of loop if total distance exceeds move limit
         if abs(dx) + abs(dy) >= unit.stat_move:
             break
         for d in directions:
+            # Add current location p to directional movement d
             tmp = tuple(map(sum, zip(p, d)))
             try:
+                # Only proceed if the proposed location hasn't been traversed before
                 paths.index(tmp)
             except:
                 test_flag = True
+                # check not to collide with other units
                 for s in sprites:
                     if tmp == (s.x, s.y):
                         test_flag = False
-                if abs(dx) + abs(dy) <= unit.stat_move and \
-                    area.xrange[0] <= tmp[0] and tmp[0] <= area.xrange[1] and \
-                    area.yrange[0] <= tmp[1] and tmp[1] <= area.yrange[1] and \
-                    test_flag:
-                    paths.append(tmp)
-                    pygame.draw.rect(area.screen, (0, 128, 0),
-                        grid_to_pixel(p[0], p[1]) + \
-                        (GRID_TO_PIXEL-5, GRID_TO_PIXEL-5))
+                if test_flag:
+                    try:
+                        # check if proposed move location is a valid grid point on the map
+                        # (think of the missing spots as impassable trees, not holes to jump over)
+                        area.grid.index(tmp)
+                        paths.append(tmp)
+                        #pygame.draw.rect(area.screen, (0, 128, 0),
+                        #    grid_to_pixel(tmp[0] + 1, tmp[1] + 1) + \
+                        #    (GRID_TO_PIXEL-25, GRID_TO_PIXEL-25))
+                    except:
+                        pass
     return paths
 
 
@@ -92,20 +108,22 @@ def main():
     pygame.display.set_caption("minimal program")
      
     # create a surface on screen that has the size of 240 x 180
-    area = Area(10, 10)
+    area = Area(10, 10, 20)
      
     # define a variable to control the main loop
     running = True
 
-    one = Character(Type1, "one")
-    one.x = 6
-    one.y = 4
+    sprites = []
+    for i in range(6):
+        if i % 2 == 0:
+            s = Character(Type1, chr(range(ord('a'), ord('z'))[i]), "blue")
+        if i % 2 == 1:
+            s = Character(Type2, chr(range(ord('a'), ord('z'))[i]), "red")
+        tmp = area.grid[random.randint(0, len(area.grid)-1)]
+        s.x = tmp[0]
+        s.y = tmp[1]
+        sprites.append(s)
 
-    two = Character(Type2, "two")
-    two.x = 6
-    two.y = 5
-
-    sprites = [one, two]
 
     tmp_text = "nothing selected"
     textsurface = myfont.render(str(tmp_text), False, (128, 0, 0))
@@ -153,9 +171,10 @@ def main():
 
 
         area.screen.fill((16, 16, 16))
-        pygame.draw.rect(area.screen, (48, 48, 48),
-            grid_to_pixel(area.xrange[0], area.yrange[0]) + \
-            grid_to_pixel(area.xrange[1]+0.5, area.yrange[1]+0.5))
+        for g in area.grid:
+            pygame.draw.rect(area.screen, (48, 48, 48),
+                grid_to_pixel(g[0], g[1]) + \
+                grid_to_pixel(1.5, 1.5))
 
         # Show the possible move options
         # Teleportation-like
@@ -182,8 +201,8 @@ def main():
             paths = get_paths(focused, sprites, area)
             for p in paths:
                 pygame.draw.rect(area.screen, (0, 128, 0),
-                    grid_to_pixel(p[0], p[1]) + \
-                    (GRID_TO_PIXEL-5, GRID_TO_PIXEL-5))
+                    grid_to_pixel(p[0] + 5/GRID_TO_PIXEL, p[1] + 5/GRID_TO_PIXEL) + \
+                    (GRID_TO_PIXEL-10, GRID_TO_PIXEL-10))
 
 
         # event handling, gets all event from the event queue
