@@ -9,15 +9,16 @@ from field import *
 def unit_order(Units):
     # Sort first so highest CT will go first
     sl = sorted(Units, key = lambda x: x.stat_ct, reverse = True)
-    # Check if any unit has CT exceeding 99
+    # Check if any unit's CT as reached 100
     for u in sl:
-        if u.stat_ct > 99:
+        if u.stat_ct >= 100:
             return u
     else:
         # Increase all units CT by SPEED, don't need to use sorted list
         for u in Units:
             u.stat_ct += u.base_speed
 
+        # Repeat until a unit reaches 100
         return unit_order(Units)
 
 
