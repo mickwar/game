@@ -86,7 +86,9 @@ class Unit(pygame.sprite.Sprite):
                             #    (GRID_TO_PIXEL-25, GRID_TO_PIXEL-25))
                         except:
                             pass
-        #return paths
+
+        # Don't include current location as allowable place to move
+        self.paths.pop(0)
 
 
 class Type1():
