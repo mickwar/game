@@ -1,43 +1,7 @@
 import pygame
 import random
 
-#class Character():
-class Character(pygame.sprite.Sprite):
-    def __init__(self, ClassType, name, color):
-        pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.image.load(color + "_triangle.png")
-        self.rect = self.image.get_rect()
-        self.x = 1
-        self.y = 1
-        self.name = name
-        self.stat_atk = 10 + ClassType.s1
-        self.stat_hp = 50 + ClassType.s2
-        self.stat_move = 3 + ClassType.s3
-        self.stat_speed = 7 + ClassType.s4
-
-    def move_delta(self, dx, dy, Area):
-        self.x = min(max(Area.xrange[0], self.x + dx), Area.xrange[1])
-        self.y = min(max(Area.yrange[0], self.y + dy), Area.yrange[1])
-
-    def move_exact(self, dx, dy, Area):
-        if abs(self.x - dx) + abs(self.y - dy) <= self.stat_move and \
-            Area.xrange[0] <= dx and dx <= Area.xrange[1] and \
-            Area.yrange[0] <= dy and dy <= Area.yrange[1]:
-            self.x = dx
-            self.y = dy
-
-
-class Type1():
-    s1 = 2
-    s2 = -3
-    s3 = 0
-    s4 = 1
-
-class Type2():
-    s1 = -1
-    s2 = 5
-    s3 = 1
-    s4 = 0
+from units import *
 
 GRID_TO_PIXEL = 50
 GRID_OFFSET = 25
@@ -60,41 +24,6 @@ class Area():
             self.grid.pop(random.randint(0, len(self.grid) - 1))
         self.screen = pygame.display.set_mode(grid_to_pixel(self.xrange[1]+1.5, self.yrange[1]+1.5))
 
-def get_paths(unit, sprites, area):
-    paths = [(unit.x, unit.y)]
-    directions = [(-1, 0), (0, -1), (1, 0), (0, 1)]
-    for p in paths:
-        # distance under current path from origin
-        dx = p[0] - paths[0][0]
-        dy = p[1] - paths[0][1]
-        # Break out of loop if total distance exceeds move limit
-        if abs(dx) + abs(dy) >= unit.stat_move:
-            break
-        for d in directions:
-            # Add current location p to directional movement d
-            tmp = tuple(map(sum, zip(p, d)))
-            try:
-                # Only proceed if the proposed location hasn't been traversed before
-                paths.index(tmp)
-            except:
-                test_flag = True
-                # check not to collide with other units
-                for s in sprites:
-                    if tmp == (s.x, s.y):
-                        test_flag = False
-                if test_flag:
-                    try:
-                        # check if proposed move location is a valid grid point on the map
-                        # (think of the missing spots as impassable trees, not holes to jump over)
-                        area.grid.index(tmp)
-                        paths.append(tmp)
-                        #pygame.draw.rect(area.screen, (0, 128, 0),
-                        #    grid_to_pixel(tmp[0] + 1, tmp[1] + 1) + \
-                        #    (GRID_TO_PIXEL-25, GRID_TO_PIXEL-25))
-                    except:
-                        pass
-    return paths
-
 
 def main():
     pygame.init()
@@ -116,9 +45,9 @@ def main():
     sprites = []
     for i in range(6):
         if i % 2 == 0:
-            s = Character(Type1, chr(range(ord('a'), ord('z'))[i]), "blue")
+            s = Unit(chr(range(ord('a'), ord('z'))[i]), "blue", Type1, Type2)
         if i % 2 == 1:
-            s = Character(Type2, chr(range(ord('a'), ord('z'))[i]), "red")
+            s = Unit(chr(range(ord('a'), ord('z'))[i]), "red", Type2, Type2)
         tmp = area.grid[random.randint(0, len(area.grid)-1)]
         s.x = tmp[0]
         s.y = tmp[1]
@@ -149,13 +78,14 @@ def main():
                 if pos == (s.x, s.y):
                     tmp_text = str(s.name) + ", move: " + str(s.stat_move)
                     focused = s
-                    paths = get_paths(focused, sprites, area)
+                    focused.get_paths(sprites, area)
+                    #paths = get_paths(focused, sprites, area)
 
         if pygame.mouse.get_pressed()[0] and not wait_flag and focused:
             wait_flag = True
             pos = pixel_to_grid(*pygame.mouse.get_pos())
             try:
-                paths.index(pos)
+                focused.paths.index(pos)
                 focused.move_exact(*pos, area)
                 focused = None
                 tmp_text = "nothing selected"
@@ -198,8 +128,8 @@ def main():
         # Show the possible move options
         # Path-like
         if focused:
-            paths = get_paths(focused, sprites, area)
-            for p in paths:
+            #paths = get_paths(focused, sprites, area)
+            for p in focused.paths:
                 pygame.draw.rect(area.screen, (0, 128, 0),
                     grid_to_pixel(p[0] + 5/GRID_TO_PIXEL, p[1] + 5/GRID_TO_PIXEL) + \
                     (GRID_TO_PIXEL-10, GRID_TO_PIXEL-10))
