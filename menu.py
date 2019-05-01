@@ -47,7 +47,7 @@ def main_menu(display_width = 640, display_height = 480):
     intro = True
     while intro:
         for event in pygame.event.get():
-            print(event)
+            #print(event)
             if event.type == pygame.QUIT:
                 quit_game()
 
