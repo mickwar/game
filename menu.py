@@ -26,7 +26,7 @@ def button(gameDisplay, msg, x, y, w, h, ic, ac, hotkey = None, action = None):
         pygame.draw.rect(gameDisplay, ic, (x, y, w, h))
 
     # Or execute on hotkey
-    if hotkey is not None and type(hotkey) is str and action is not none:
+    if hotkey is not None and type(hotkey) is str and action is not None:
         if key[ord(hotkey)] == 1:
             r = action()
 
