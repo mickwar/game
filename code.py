@@ -7,6 +7,33 @@ from menu import *
 
 clock = pygame.time.Clock()
 
+
+def test_func():
+    print("this is a test")
+    return True
+
+# Function that always returns true
+def func_true():
+    return True
+
+def popup_menu(gameDisplay, x, y, w, h):
+
+    # Display the menu at given coordinates
+    # Add buttons
+    pygame.draw.rect(gameDisplay.screen, (128, 0, 128), (x, y, w, h))
+    r = [False, False]
+    r[0] = button(gameDisplay.screen, "M", x + 5, y + 5, 30, 30,
+        (196,0,0), (255,0,0), "m", func_true)
+    r[1] = button(gameDisplay.screen, "A", x + w/2 + 5, y + 5, 30, 30,
+        (196,0,0), (255,0,0), "a", func_true)
+    pygame.display.update()
+
+    if r[0] and r[1]:
+        r[1] = False
+
+    return r
+
+
 # Get unit next in turn order
 def unit_order(Units):
     # Sort first so highest CT will go first
@@ -59,6 +86,7 @@ def main():
     tmp_text = "nothing selected"
     textsurface = myfont.render(str(tmp_text), False, (128, 0, 0))
     focused = None
+    status = 1
      
     # main loop
     while running:
@@ -70,15 +98,22 @@ def main():
             if event.type == pygame.QUIT:
                 # change the value to False, to exit the main loop
                 running = False
+                quit_game()
 
+        mouse = pygame.mouse.get_pos()
+        click = pygame.mouse.get_pressed()
+        key = pygame.key.get_pressed()
 
-        #print(unit_order(Units).stat_ct)
-        focused = unit_order(Units)
-        focused.get_paths(Units, area)
-        tmp_text = str(focused.name) + ", move: " + str(focused.base_move)
-        print("")
-        for u in Units:
-            print(str(u.name) + ": " + str(u.stat_ct))
+        # Go back one level on ESCAPE key press
+        if key[27] == 1 and status > 0:
+            print("status down")
+            status -= 1
+
+        # Get next unit's turn
+        if focused is None:
+            focused = unit_order(Units)
+            focused.get_paths(Units, area)
+            status = 1
 
         # Moving
         if not pygame.mouse.get_pressed()[0]:
@@ -141,7 +176,7 @@ def main():
 
         # Show the possible move options
         # Path-like
-        if focused:
+        if focused and status == 2:
             #paths = get_paths(focused, Units, area)
             for p in focused.paths:
                 pygame.draw.rect(area.screen, (0, 128, 0),
@@ -149,10 +184,19 @@ def main():
                     (GRID_TO_PIXEL-10, GRID_TO_PIXEL-10))
 
 
+
         # event handling, gets all event from the event queue
         #one.move(round(random.uniform(-1, 1)/1.99 * 1), round(random.uniform(-1, 1)/1.99 * 1), area)
         for s in Units:
             area.screen.blit(s.image, grid_to_pixel(s.x, s.y))
+
+        if focused and status == 1:
+            r = popup_menu(area, *(grid_to_pixel(focused.x + 1, focused.y - 0.3) + (80, 40)))
+            if r[0]:
+                status = 2
+            if r[1]:
+                status = 3
+            print(r)
 
         #area.screen.blit(one.image, grid_to_pixel(one.x, one.y))
         area.screen.blit(textsurface,(8,4))
