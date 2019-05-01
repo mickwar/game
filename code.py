@@ -4,6 +4,73 @@ import random
 from units import *
 from field import *
 
+clock = pygame.time.Clock()
+
+# Main menu
+def text_objects(text, font):
+    textSurface = font.render(text, True, (0,0,0))
+    return textSurface, textSurface.get_rect()
+
+def play_game():
+    print("play")
+    return True
+
+def quit_game():
+    print("quitting")
+    pygame.quit()
+    quit()
+
+# Returns False or the result of running action()
+def button(gameDisplay, msg, x, y, w, h, ic, ac, action = None):
+    # Get mouse position and click status
+    mouse = pygame.mouse.get_pos()      # (x, y)
+    click = pygame.mouse.get_pressed()  # (LeftClick, MiddleButton, RightClick)
+
+    # Check if mouse is within the rectangle
+    r = False
+    if x < mouse[0] < x + w and y < mouse[1] < y + h:
+        pygame.draw.rect(gameDisplay, ac, (x, y, w, h))
+        # Check if clicked
+        if click[0] == 1 and action != None:
+            r = action() 
+    else:
+        pygame.draw.rect(gameDisplay, ic, (x, y, w, h))
+
+    # Place text in center
+    smallText = pygame.font.SysFont("Arial", 20)
+    textSurf, textRect = text_objects(msg, smallText)
+    textRect.center = ( (x+(w/2)), (y+(h/2)) )
+    gameDisplay.blit(textSurf, textRect)
+
+    return r
+    
+
+def main_menu():
+
+    gameDisplay = pygame.display.set_mode((640, 480))
+    _, _, display_width, display_height = gameDisplay.get_rect()
+
+    intro = True
+    while intro:
+        for event in pygame.event.get():
+            print(event)
+            if event.type == pygame.QUIT:
+                quit_game()
+
+        gameDisplay.fill((16, 16, 16))
+        largeText = pygame.font.SysFont("Arial", 32)
+        TextSurf, TextRect = text_objects("game", largeText)
+        TextRect.center = ((display_width/2), (display_height/2))
+        gameDisplay.blit(TextSurf, TextRect)
+
+        # play_game() returns True, so we want to exit main menu
+        intro = not button(gameDisplay, "Play", 150, 350, 100, 50, (196,0,0), (255,0,0), play_game)
+        button(gameDisplay, "Quit", 350, 350, 100, 50, (196,0,0), (255,0,0), quit_game)
+
+        pygame.display.update()
+        clock.tick(30)
+
+
 
 # Get unit next in turn order
 def unit_order(Units):
@@ -32,6 +99,8 @@ def main():
     logo = pygame.image.load("red_triangle.png")
     pygame.display.set_icon(logo)
     pygame.display.set_caption("minimal program")
+
+    main_menu()
      
     # create a surface on screen that has the size of 240 x 180
     area = Field(10, 10, 0)
@@ -58,6 +127,8 @@ def main():
      
     # main loop
     while running:
+
+        clock.tick(30)
 
         for event in pygame.event.get():
             # only do something if the event is of type QUIT
