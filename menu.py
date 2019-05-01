@@ -20,13 +20,13 @@ def button(gameDisplay, msg, x, y, w, h, ic, ac, hotkey = None, action = None):
     if x < mouse[0] < x + w and y < mouse[1] < y + h:
         pygame.draw.rect(gameDisplay, ac, (x, y, w, h))
         # Check if clicked
-        if click[0] == 1 and action != None:
+        if click[0] == 1 and action is not None:
             r = action() 
     else:
         pygame.draw.rect(gameDisplay, ic, (x, y, w, h))
 
     # Or execute on hotkey
-    if hotkey is not None and type(hotkey) is str:
+    if hotkey is not None and type(hotkey) is str and action is not none:
         if key[ord(hotkey)] == 1:
             r = action()
 
