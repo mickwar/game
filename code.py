@@ -1,6 +1,9 @@
 import pygame
 import random
 
+import pygbutton
+
+
 from units import *
 from field import *
 from menu import *
@@ -18,15 +21,37 @@ def func_true():
 
 def popup_menu(gameDisplay, x, y, w, h):
 
-    # Display the menu at given coordinates
-    # Add buttons
-    pygame.draw.rect(gameDisplay.screen, (128, 0, 128), (x, y, w, h))
-    r = [False, False]
-    r[0] = button(gameDisplay.screen, "M", x + 5, y + 5, 30, 30,
-        (196,0,0), (255,0,0), "m", func_true)
-    r[1] = button(gameDisplay.screen, "A", x + w/2 + 5, y + 5, 30, 30,
-        (196,0,0), (255,0,0), "a", func_true)
-    pygame.display.update()
+    # Create buttons
+    b_move = pygbutton.PygButton(
+        rect = (x + 5, y + 5, 30, 30),
+        caption = "M",
+        bgcolor = (0,196,0),
+        fgcolor = (0,0,0),
+        hotkeys = pygame.K_m)
+    b_attack = pygbutton.PygButton(
+        rect = (x + w/2 + 5, y + 5, 30, 30),
+        caption = "A",
+        bgcolor = (196,0,0),
+        fgcolor = (0,0,0),
+        hotkeys = pygame.K_a)
+
+    show = True
+    while show:
+        # Display the menu at given coordinates
+        # Add buttons
+        pygame.draw.rect(gameDisplay.screen, (128, 0, 128), (x, y, w, h))
+        r = [False, False]
+        for event in pygame.event.get():
+            if [e for e in ['left_click', 'hotkeyup'] if e in b_move.handleEvent(event)]:
+                r[0] = True
+                show = False
+            if [e for e in ['left_click', 'hotkeyup'] if e in b_attack.handleEvent(event)]:
+                r[1] = True
+                show = False
+
+        b_move.draw(gameDisplay.screen)
+        b_attack.draw(gameDisplay.screen)
+        pygame.display.update()
 
     if r[0] and r[1]:
         r[1] = False
@@ -50,20 +75,8 @@ def unit_order(Units):
         # Repeat until a unit reaches 100
         return unit_order(Units)
 
+def game_loop():
 
-def main():
-    pygame.init()
-
-    pygame.font.init()
-    myfont = pygame.font.SysFont('Arial', 16)
-
-    # load and set the logo
-    logo = pygame.image.load("red_triangle.png")
-    pygame.display.set_icon(logo)
-    pygame.display.set_caption("minimal program")
-
-    main_menu()
-     
     # create a surface on screen that has the size of 240 x 180
     area = Field(10, 10, 0)
      
@@ -88,6 +101,8 @@ def main():
     focused = None
     prev_status = 0
     status = 1
+
+    key = []
      
     # main loop
     while running:
@@ -101,16 +116,30 @@ def main():
                 running = False
                 quit_game()
 
+            # Go back in menus
+            # 0 - Nothing selected
+            # 1 - Action menu for current unit
+            # 2 - Move
+            # 3 - Act
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    if status == 1:
+                        status = 0
+
+                    if (status == 2 or status == 3):
+                        status = 1
+
+
         mouse = pygame.mouse.get_pos()
         click = pygame.mouse.get_pressed()
-        key = pygame.key.get_pressed()
+        #key = pygame.key.get_pressed()
 
         # Go back one level on ESCAPE key press
-        if key[27] == 1 and status == 1:
-            status = 0
+        #if key[27] == 1 and status == 1:
+        #    status = 0
 
-        if key[27] == 1 and (status == 2 or status == 3):
-            status = 1
+        #if key[27] == 1 and (status == 2 or status == 3):
+        #    status = 1
 
         # Get next unit's turn
         if focused is None:
@@ -205,6 +234,22 @@ def main():
         area.screen.blit(textsurface,(8,4))
         textsurface = myfont.render(str(tmp_text), False, (128, 0, 0))
         pygame.display.flip()
+
+myfont = pygame.font.SysFont('Arial', 16)
+
+def main():
+    pygame.init()
+
+    pygame.font.init()
+    #myfont = pygame.font.SysFont('Arial', 16)
+
+    # load and set the logo
+    logo = pygame.image.load("red_triangle.png")
+    pygame.display.set_icon(logo)
+    pygame.display.set_caption("minimal program")
+
+    main_menu()
+    game_loop()
 
 
 if __name__ == "__main__":
