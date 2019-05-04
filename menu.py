@@ -1,77 +1,54 @@
 import pygame
+import pygbutton
 
-clock = pygame.time.Clock()
-
-# Process text
 def text_objects(text, font):
     textSurface = font.render(text, True, (0,0,0))
     return textSurface, textSurface.get_rect()
-
-# Returns False or the result of running action()
-# Should this be a class?
-def button(gameDisplay, msg, x, y, w, h, ic, ac, hotkey = None, action = None):
-    # Get mouse position and click status
-    mouse = pygame.mouse.get_pos()      # (x, y)
-    click = pygame.mouse.get_pressed()  # (LeftClick, MiddleButton, RightClick)
-    key = pygame.key.get_pressed()
-
-    # Check if mouse is within the rectangle
-    r = False
-    if x < mouse[0] < x + w and y < mouse[1] < y + h:
-        pygame.draw.rect(gameDisplay, ac, (x, y, w, h))
-        # Check if clicked
-        if click[0] == 1 and action is not None:
-            r = action() 
-    else:
-        pygame.draw.rect(gameDisplay, ic, (x, y, w, h))
-
-    # Or execute on hotkey
-    if hotkey is not None and type(hotkey) is str and action is not None:
-        if key[ord(hotkey)] == 1:
-            r = action()
-
-    # Place text in center
-    smallText = pygame.font.SysFont("Arial", 20)
-    textSurf, textRect = text_objects(msg, smallText)
-    textRect.center = ( (x+(w/2)), (y+(h/2)) )
-    gameDisplay.blit(textSurf, textRect)
-
-    return r
-    
-
-# The main menu
-def main_menu(display_width = 640, display_height = 480):
-
-    gameDisplay = pygame.display.set_mode((display_width, display_height))
-
-    intro = True
-    while intro:
-        for event in pygame.event.get():
-            #print(event)
-            if event.type == pygame.QUIT:
-                quit_game()
-
-        gameDisplay.fill((16, 16, 16))
-        largeText = pygame.font.SysFont("Arial", 32)
-        TextSurf, TextRect = text_objects("game", largeText)
-        TextRect.center = ((display_width/2), (display_height/2))
-        gameDisplay.blit(TextSurf, TextRect)
-
-        # play_game() returns True, so we want to exit main menu
-        intro = not button(gameDisplay, "Play", 150, 350, 100, 50, (196,0,0), (255,0,0), "p", play_game)
-        button(gameDisplay, "Quit", 350, 350, 100, 50, (196,0,0), (255,0,0), "q", quit_game)
-
-        pygame.display.update()
-        clock.tick(30)
-
-
-
-# Button actions
-def play_game():
-    print("play")
-    return True
 
 def quit_game():
     print("quitting")
     pygame.quit()
     quit()
+
+def main_menu():
+    w = 640
+    h = 480
+    b_WIDTH = 150
+    b_HEIGHT = 50
+    
+    gameDisplay = pygame.display.set_mode((w, h))
+
+    b_FONT = pygame.font.SysFont("Arial", 32)
+    b_play = pygbutton.PygButton(
+        rect = (w * 1/4 - b_WIDTH/2, h * 3/4 - b_HEIGHT/2, b_WIDTH, b_HEIGHT),
+        caption = "Play",
+        font = b_FONT,
+        hotkeys = pygame.K_p)
+    b_quit = pygbutton.PygButton(
+        rect = (w * 3/4 - b_WIDTH/2, h * 3/4 - b_HEIGHT/2, b_WIDTH, b_HEIGHT),
+        caption = "Quit",
+        font = b_FONT,
+        hotkeys = pygame.K_q)
+
+    intro = True
+    while intro:
+
+        gameDisplay.fill((16, 16, 16))
+        largeText = pygame.font.SysFont("Arial", 64)
+        TextSurf, TextRect = text_objects("a game", largeText)
+        TextRect.center = ((w/2), (h/4))
+        gameDisplay.blit(TextSurf, TextRect)
+
+        for event in pygame.event.get():
+            if [e for e in ['left_click', 'hotkeyup'] if e in b_play.handleEvent(event)]:
+                intro = False
+            if [e for e in ['left_click', 'hotkeyup'] if e in b_quit.handleEvent(event)]:
+                quit_game()
+            if event.type == pygame.QUIT:
+                quit_game()
+
+        b_play.draw(gameDisplay)
+        b_quit.draw(gameDisplay)
+
+        pygame.display.update()
+
