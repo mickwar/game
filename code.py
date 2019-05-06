@@ -82,7 +82,7 @@ def menu_unit_main(gameDisplay, current_unit, x, y, w = 100, h = 110):
             caption = "Move (M)",
             bgcolor = COLOR_DISABLED,
             fgcolor = (0,0,0),
-            hotkeys = pygame.K_m)
+            hotkeys = [])
 
     if not current_unit.acted:
         # enabled
@@ -99,7 +99,7 @@ def menu_unit_main(gameDisplay, current_unit, x, y, w = 100, h = 110):
             caption = "Act (A)",
             bgcolor = COLOR_DISABLED,
             fgcolor = (0,0,0),
-            hotkeys = pygame.K_a)
+            hotkeys = [])
 
     # Can always wait
     b_wait = pygbutton.PygButton(
@@ -141,12 +141,6 @@ def menu_unit_main(gameDisplay, current_unit, x, y, w = 100, h = 110):
     return r
 
 
-# do_move() is being repeatedly called (within game_loop()), so the clickTest
-# classes (named "c") are constantly being overwritten. do_move() should only
-# be called once, and then the loop within do_move() should have the focus, but
-# the game_loop is still running. Maybe that's a wrong way of thinking, but
-# need to find a fix
-
 # For waiting for user to select movement square
 def do_move(gameDisplay, current_unit, Units):
     # Get possible movement paths
@@ -157,8 +151,8 @@ def do_move(gameDisplay, current_unit, Units):
         c.append(clickTest(grid_to_pixel(p[0] + 5/GRID_TO_PIXEL, p[1] + 5/GRID_TO_PIXEL) + \
                   (GRID_TO_PIXEL-10, GRID_TO_PIXEL-10)))
 
-    back = False
     show = True
+    back = False
     while show:
         for event in pygame.event.get():
             for i in c:
@@ -171,8 +165,8 @@ def do_move(gameDisplay, current_unit, Units):
 
             if event.type == pygame.KEYUP:
                 if event.key == pygame.K_ESCAPE:
-                    back = True
                     show = False
+                    back = True
                     break
 
         for i in c:
@@ -200,6 +194,29 @@ def unit_order(Units):
         return unit_order(Units)
 
 
+# During no selection
+def unit_select(gameDisplay, Units):
+
+    clickables = []
+    for u in Units:
+        clickables.append(clickTest(grid_to_pixel(u.x, u.y) + \
+                  (GRID_TO_PIXEL, GRID_TO_PIXEL)))
+
+    selected_unit = None
+    show = True
+    while show:
+        for event in pygame.event.get():
+            for i in clickables:
+                if i.handleEvent(event):
+                    show = False
+                    selected_unit = Units[clickables.index(i)]
+                    break
+
+        pygame.display.update()
+
+    return selected_unit
+
+
 # A temporary initialization function for spawning units
 def unit_create(area):
     Units = []
@@ -225,6 +242,7 @@ def game_loop():
     # initialize some units
     Units = unit_create(area)
 
+    selected_unit = None
     current_unit = None
     status = 1
 
@@ -254,15 +272,16 @@ def game_loop():
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     if status == 1:
+                        selected_unit = None
                         status = 0
 
                     if (status == 2 or status == 3):
                         status = 1
 
+                    if status == 0:
+                        selected_unit = None
 
-        #mouse = pygame.mouse.get_pos()
-        #click = pygame.mouse.get_pressed()
-        #key = pygame.key.get_pressed()
+
 
         # Go back one level on ESCAPE key press
         #if key[27] == 1 and status == 1:
@@ -277,7 +296,15 @@ def game_loop():
             current_unit.get_paths(Units, area)
             current_unit.moved = False
             current_unit.acted = False
+            current_unit.boosted = False
+            selected_unit = current_unit
             status = 1
+
+        # Allow unit selection
+        if status == 0:
+            selected_unit = unit_select(area.screen, Units)
+            if selected_unit is current_unit:
+                status = 1
 
 
         # Draw the map
@@ -289,21 +316,28 @@ def game_loop():
 
 
         # Show unit stats
-        if current_unit:
-            show_stats(area.screen, current_unit)
+        if selected_unit:
+            show_stats(area.screen, selected_unit)
 
 
         # Draw the units
         for u in Units:
 
-            # Highlight current unit
             if u is current_unit:
+                # Highlight current unit
                 pygame.draw.rect(area.screen, (230, 230, 0),
-                    grid_to_pixel(current_unit.x + 5/GRID_TO_PIXEL, current_unit.y + 5/GRID_TO_PIXEL) + \
+                    grid_to_pixel(u.x + 5/GRID_TO_PIXEL, u.y + 5/GRID_TO_PIXEL) + \
+                    (GRID_TO_PIXEL-10, GRID_TO_PIXEL-10))
+
+            elif u is selected_unit:
+                # Highlight selected unit
+                pygame.draw.rect(area.screen, (0, 230, 230),
+                    grid_to_pixel(u.x + 5/GRID_TO_PIXEL, u.y + 5/GRID_TO_PIXEL) + \
                     (GRID_TO_PIXEL-10, GRID_TO_PIXEL-10))
 
             # Draw each unit
             area.screen.blit(u.image, grid_to_pixel(u.x, u.y))
+
 
         pygame.display.update()
 
@@ -324,6 +358,10 @@ def game_loop():
             if r[2]:
                 # Wait
                 status = 4
+            if r[3]:
+                selected_unit = None
+                status = 0
+                # Go up menu
 
         if current_unit:
             if current_unit.moved and status == 2:
@@ -349,6 +387,7 @@ def game_loop():
                 status = 1
                 current_unit.moved = False
                 current_unit.acted = False
+                current_unit.boosted = False
                 current_unit = None
 
 
