@@ -113,8 +113,8 @@ def menu_unit_main(gameDisplay, current_unit, x, y, w = 100, h = 110):
     while show:
         # Display the menu at given coordinates
         # Add buttons
-        pygame.draw.rect(gameDisplay.screen, (128, 0, 128), (x, y, w, h))
-        r = [0, 0, 0]
+        pygame.draw.rect(gameDisplay.screen, (128, 128, 0), (x, y, w, h))
+        r = [0, 0, 0, 0]
         for event in pygame.event.get():
             if [e for e in ['left_click', 'hotkeyup'] if e in b_move.handleEvent(event)]:
                 r[0] = 1
@@ -127,6 +127,7 @@ def menu_unit_main(gameDisplay, current_unit, x, y, w = 100, h = 110):
                 show = False
             if event.type == pygame.KEYUP:
                 if event.key == pygame.K_ESCAPE:
+                    r[3] = 1
                     show = False
 
         b_move.draw(gameDisplay.screen)
@@ -156,6 +157,7 @@ def do_move(gameDisplay, current_unit, Units):
         c.append(clickTest(grid_to_pixel(p[0] + 5/GRID_TO_PIXEL, p[1] + 5/GRID_TO_PIXEL) + \
                   (GRID_TO_PIXEL-10, GRID_TO_PIXEL-10)))
 
+    back = False
     show = True
     while show:
         for event in pygame.event.get():
@@ -167,12 +169,18 @@ def do_move(gameDisplay, current_unit, Units):
                     current_unit.moved = True
                     break
 
+            if event.type == pygame.KEYUP:
+                if event.key == pygame.K_ESCAPE:
+                    back = True
+                    show = False
+                    break
+
         for i in c:
             i.draw(gameDisplay.screen)
 
         pygame.display.update()
 
-    return current_unit
+    return current_unit, back
 
 
 # Get unit next in turn order
@@ -212,15 +220,12 @@ def unit_create(area):
 def game_loop():
 
     # create a surface on screen that has the size of 240 x 180
-    area = Field(10, 10, 0)
+    area = Field(10, 10, 30)
 
     # initialize some units
     Units = unit_create(area)
 
-    #tmp_text = "nothing selected"
-    #textsurface = myfont.render(str(tmp_text), False, (128, 0, 0))
     current_unit = None
-    prev_status = 0
     status = 1
 
     key = []
@@ -283,6 +288,11 @@ def game_loop():
                 grid_to_pixel(1.5, 1.5))
 
 
+        # Show unit stats
+        if current_unit:
+            show_stats(area.screen, current_unit)
+
+
         # Draw the units
         for u in Units:
 
@@ -295,8 +305,13 @@ def game_loop():
             # Draw each unit
             area.screen.blit(u.image, grid_to_pixel(u.x, u.y))
 
+        pygame.display.update()
+
         if current_unit and status == 2:
-            current_unit = do_move(area, current_unit, Units)
+            current_unit, tmp = do_move(area, current_unit, Units)
+            if tmp:
+                status = 1
+                tmp = False
 
         if current_unit and status == 1:
             r = menu_unit_main(area, current_unit, *(grid_to_pixel(current_unit.x + 1, current_unit.y - 0.3)))
@@ -327,6 +342,9 @@ def game_loop():
                 if current_unit.moved and current_unit.acted:
                     current_unit.stat_ct = max(0, current_unit.stat_ct - 100)
 
+                if not current_unit.boosted:
+                    current_unit.stat_bp = min(current_unit.base_bp_max, current_unit.stat_bp + 1)
+
                 # Reset
                 status = 1
                 current_unit.moved = False
@@ -335,13 +353,10 @@ def game_loop():
 
 
         #area.screen.blit(one.image, grid_to_pixel(one.x, one.y))
-        #area.screen.blit(textsurface,(8,4))
-        #textsurface = myfont.render(str(tmp_text), False, (128, 0, 0))
-        pygame.display.flip()
+        #pygame.display.update()
 
 
 
-#myfont = pygame.font.SysFont('Arial', 16)
 
 def main():
     pygame.init()

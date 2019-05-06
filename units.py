@@ -34,6 +34,7 @@ class Unit(pygame.sprite.Sprite):
         # Action properties
         self.moved = False
         self.acted = False
+        self.boosted = False
 
     def job_stats(self, Job = None, degree = 1):
         if Job is not None:
@@ -113,7 +114,7 @@ class Unit(pygame.sprite.Sprite):
 class Type1():
     d_hp_max = 10
     d_mp_max = 10
-    d_bp_max = 10
+    d_bp_max = 0
     d_shield_max = 0
     d_strength = 10
     d_vitality = 10
@@ -123,9 +124,9 @@ class Type1():
     d_speed = 2
 
 class Type2():
-    d_hp_max = 10
+    d_hp_max = 9
     d_mp_max = 10
-    d_bp_max = 10
+    d_bp_max = 0
     d_shield_max = 0
     d_strength = 10
     d_vitality = 10
@@ -133,3 +134,61 @@ class Type2():
     d_spirit = 10
     d_move = 1
     d_speed = 1
+
+
+# Different attack possibilities:
+# Shield > 0, not weak: 25% DMG
+# Shield > 0, weak:     50% DMG
+# Shield = 0, not weak: 90% DMG
+# Shield = 0, weak:     100% DMG
+
+# You are punished more for not having shield
+# Shield is only reduced when hit by a weakness
+
+
+# Function for displaying unit stats on the side
+def show_stats(gameDisplay, unit):
+    # HARD CODED
+    rel_x = 600
+    rel_dx = 100
+    rel_dy1 = 21
+    rel_dy2 = 11
+
+    # Calculate the coordinates
+    def xy(n, dx_ind = 0, dy_ind = 0):
+        return ((rel_x + dx_ind * rel_dx, 8 + rel_dy1 * n + dy_ind * rel_dy2))
+
+    myfont = pygame.font.SysFont('Arial', 16)
+
+    attr_order = ['name', '_hp', '_mp', '_bp', '_shield', '_ct', '_strength', '_vitality',
+        '_magic', '_spirit', '_move', '_speed']
+    attr_display = ['Name', 'HP', 'MP', 'BP', 'SH', 'CT', 'STR', 'VIT',
+        'MAG', 'SPR', 'Move', 'Speed']
+
+    # Specifying the coordinates
+    # (The variables are poorly named, not intuitive as to what this is)
+    n_vec = [0, 1, 2, 3, 4, 5, 6, 6, 7, 7, 8, 8]
+    a_vec = [0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1]
+    b_vec = [0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2]
+
+    for i in range(len(attr_order)):
+        attrs = [a for a in dir(unit) if attr_order[i] in a]
+        # Special case for CT
+        if [a for a in attrs if "stat_ct" in a]:
+            tmp_text = attr_display[i] + ": " + str(getattr(unit, attrs[0])) + " / 100"
+            textsurface = myfont.render(str(tmp_text), False, (128, 0, 0))
+            gameDisplay.blit(textsurface, xy(n_vec[i], a_vec[i], b_vec[i]))
+            continue
+
+        # If "stat" is found in the attribute, goes on the left of " / ", otherwise just
+        # show the "base"
+        if [a for a in attrs if "stat" in a]:
+            tmp_text = attr_display[i] + ": " + str(getattr(unit, attrs[-1])) + \
+                " / " + str(getattr(unit, attrs[0]))
+            textsurface = myfont.render(str(tmp_text), False, (128, 0, 0))
+            gameDisplay.blit(textsurface, xy(n_vec[i], a_vec[i], b_vec[i]))
+        else:
+            tmp_text = attr_display[i] + ": " + str(getattr(unit, attrs[0]))
+            textsurface = myfont.render(str(tmp_text), False, (128, 0, 0))
+            gameDisplay.blit(textsurface, xy(n_vec[i], a_vec[i], b_vec[i]))
+

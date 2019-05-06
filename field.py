@@ -20,5 +20,5 @@ class Field():
         while n > 0:
             n = n - 1
             self.grid.pop(random.randint(0, len(self.grid) - 1))
-        self.screen = pygame.display.set_mode(grid_to_pixel(self.xrange[1]+1.5, self.yrange[1]+1.5))
+        self.screen = pygame.display.set_mode(grid_to_pixel(self.xrange[1]+6.5, self.yrange[1]+2.0))
 
