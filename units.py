@@ -136,16 +136,6 @@ class Type2():
     d_speed = 1
 
 
-# Different attack possibilities:
-# Shield > 0, not weak: 25% DMG
-# Shield > 0, weak:     50% DMG
-# Shield = 0, not weak: 90% DMG
-# Shield = 0, weak:     100% DMG
-
-# You are punished more for not having shield
-# Shield is only reduced when hit by a weakness
-
-
 # Function for displaying unit stats on the side
 def show_stats(gameDisplay, unit):
     # HARD CODED
@@ -192,3 +182,23 @@ def show_stats(gameDisplay, unit):
             textsurface = myfont.render(str(tmp_text), False, (128, 0, 0))
             gameDisplay.blit(textsurface, xy(n_vec[i], a_vec[i], b_vec[i]))
 
+
+# Different attack possibilities:
+# Shield > 0, not weak: 25% DMG
+# Shield > 0, weak:     50% DMG
+# Shield = 0, not weak: 90% DMG
+# Shield = 0, weak:     100% DMG
+
+# You are punished more for not having shield
+# Shield is only reduced when hit by a weakness
+
+# Boost effects (max 3 BP can be used):
+# - Regular attack: 1 + BP number of attacks
+# - Magic attack:   DMG = DMG * (1 + BP * 0.75)
+# - Accuracy:       Prob (p) = sum_{i = 1}^{BP} p * (1-p)^i, or sum(dgeom(0:BP, p)) # in R
+#                   (This reduces the increase as BP increases, doesn't surpass 1)
+# - Enables ultimates at 3 BP
+# - Move increased by each BP
+# - Status effects last BP more turns (as opposed to strengthening the effects)
+# - Restore shield?
+# - Temporarily guard against a weakness?
