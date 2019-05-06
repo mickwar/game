@@ -64,6 +64,7 @@ class Unit(pygame.sprite.Sprite):
 
     def get_paths(self, Units, Map):
         self.paths = [(self.x, self.y)]
+        ally_locs = []
         directions = [(-1, 0), (0, -1), (1, 0), (0, 1)]
         for p in self.paths:
             # distance under current path from origin
@@ -81,9 +82,13 @@ class Unit(pygame.sprite.Sprite):
                 except:
                     test_flag = True
                     # check not to collide with other units
+                    # can't pass enemies, but can pass allies
                     for u in Units:
                         if tmp == (u.x, u.y):
-                            test_flag = False
+                            if self.team != u.team:
+                                test_flag = False
+                            else:
+                                ally_locs.append(tmp)
                     if test_flag:
                         try:
                             # check if proposed move location is a valid grid point on the map
@@ -95,6 +100,11 @@ class Unit(pygame.sprite.Sprite):
                             #    (GRID_TO_PIXEL-25, GRID_TO_PIXEL-25))
                         except:
                             pass
+
+        # Remove any ally locations (so passable but can't end on it)
+        for a in ally_locs:
+            if a in self.paths:
+                self.paths.pop(self.paths.index(a))
 
         # Don't include current location as allowable place to move
         self.paths.pop(0)
