@@ -1,5 +1,9 @@
 import pygame
 
+from clickTest import *
+from field import *
+from menu import *
+
 class Unit(pygame.sprite.Sprite):
     def __init__(self, team, name, color, JobPrimary = None, JobSecondary = None):
         pygame.sprite.Sprite.__init__(self)
@@ -137,6 +141,35 @@ class Type2():
     d_speed = 1
 
 
+
+# For waiting for user to select movement square
+class doMove():
+
+    def __init__(self, unit, Units, gameDisplay):
+        unit.get_paths(Units, gameDisplay)
+        self.paths = unit.paths
+        self.clickables = []
+        for p in self.paths:
+            self.clickables.append(clickTest(
+                grid_to_pixel(p[0] + 5/GRID_TO_PIXEL, p[1] + 5/GRID_TO_PIXEL) + \
+                (GRID_TO_PIXEL-10, GRID_TO_PIXEL-10)))
+
+    def handleEvent(self, event, unit, gameDisplay):
+        for c in self.clickables:
+            if c.handleEvent(event):
+                pos = pixel_to_grid(*pygame.mouse.get_pos())
+                unit.move_exact(*pos, gameDisplay)
+                unit.moved = True
+                break
+
+        return unit
+
+    def draw(self, gameDisplay):
+        for c in self.clickables:
+            c.draw(gameDisplay.screen)
+
+
+
 # Function for displaying unit stats on the side
 def show_stats(gameDisplay, unit):
     # HARD CODED
@@ -182,6 +215,26 @@ def show_stats(gameDisplay, unit):
             tmp_text = attr_display[i] + ": " + str(getattr(unit, attrs[0]))
             textsurface = myfont.render(str(tmp_text), False, (128, 0, 0))
             gameDisplay.blit(textsurface, xy(n_vec[i], a_vec[i], b_vec[i]))
+
+
+# Get unit next in turn order
+# This is a recursive function that continually increases each units' CT by its
+# base speed until there is a unit with CT >= 100. The unit with the highest CT
+# is return, it is that unit's turn.
+def unit_order(Units):
+    # Sort first so highest CT will go first
+    sl = sorted(Units, key = lambda x: x.stat_ct, reverse = True)
+    # Check if any unit's CT as reached 100
+    for u in sl:
+        if u.stat_ct >= 100:
+            return u
+    else:
+        # Increase all units CT by SPEED, don't need to use sorted list
+        for u in Units:
+            u.stat_ct += u.base_speed
+
+        # Repeat until a unit reaches 100
+        return unit_order(Units)
 
 
 # Different attack possibilities:
