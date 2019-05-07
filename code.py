@@ -142,39 +142,31 @@ def menu_unit_main(gameDisplay, current_unit, x, y, w = 100, h = 110):
 
 
 # For waiting for user to select movement square
-def do_move(gameDisplay, current_unit, Units):
-    # Get possible movement paths
-    current_unit.get_paths(Units, gameDisplay)
+class doMove():
 
-    c = []
-    for p in current_unit.paths:
-        c.append(clickTest(grid_to_pixel(p[0] + 5/GRID_TO_PIXEL, p[1] + 5/GRID_TO_PIXEL) + \
-                  (GRID_TO_PIXEL-10, GRID_TO_PIXEL-10)))
+    def __init__(self, unit, Units, gameDisplay):
+        unit.get_paths(Units, gameDisplay)
+        self.paths = unit.paths
+        self.clickables = []
+        for p in self.paths:
+            self.clickables.append(clickTest(
+                grid_to_pixel(p[0] + 5/GRID_TO_PIXEL, p[1] + 5/GRID_TO_PIXEL) + \
+                (GRID_TO_PIXEL-10, GRID_TO_PIXEL-10)))
 
-    show = True
-    back = False
-    while show:
-        for event in pygame.event.get():
-            for i in c:
-                if i.handleEvent(event):
-                    show = False
-                    pos = pixel_to_grid(*pygame.mouse.get_pos())
-                    current_unit.move_exact(*pos, gameDisplay)
-                    current_unit.moved = True
-                    break
+    def handleEvent(self, event, unit, gameDisplay):
+        for c in self.clickables:
+            if c.handleEvent(event):
+                pos = pixel_to_grid(*pygame.mouse.get_pos())
+                unit.move_exact(*pos, gameDisplay)
+                unit.moved = True
+                break
 
-            if event.type == pygame.KEYUP:
-                if event.key == pygame.K_ESCAPE:
-                    show = False
-                    back = True
-                    break
+        return unit
 
-        for i in c:
-            i.draw(gameDisplay.screen)
+    def draw(self, gameDisplay):
+        for c in self.clickables:
+            c.draw(gameDisplay.screen)
 
-        pygame.display.update()
-
-    return current_unit, back
 
 
 # Get unit next in turn order
@@ -193,28 +185,6 @@ def unit_order(Units):
         # Repeat until a unit reaches 100
         return unit_order(Units)
 
-
-# During no selection
-#def unit_select(gameDisplay, Units):
-#
-#    clickables = []
-#    for u in Units:
-#        clickables.append(clickTest(grid_to_pixel(u.x, u.y) + \
-#                  (GRID_TO_PIXEL, GRID_TO_PIXEL)))
-#
-#    selected_unit = None
-#    show = True
-#    while show:
-#        for event in pygame.event.get():
-#            for i in clickables:
-#                if i.handleEvent(event):
-#                    show = False
-#                    selected_unit = Units[clickables.index(i)]
-#                    break
-#
-#        pygame.display.update()
-#
-#    return selected_unit
 
 # During no selection
 class unitSelect():
@@ -270,52 +240,12 @@ def game_loop():
     running = True
 
     obj_unitSelect = None
+    obj_doMove = None
      
     # main loop
     while running:
 
         clock.tick(30)
-        if status == 0 and obj_unitSelect is None:
-            obj_unitSelect = unitSelect(Units)
-
-        for event in pygame.event.get():
-            # only do something if the event is of type QUIT
-            if event.type == pygame.QUIT:
-                # change the value to False, to exit the main loop
-                running = False
-                quit_game()
-
-            # Go back in menus
-            # 0 - Nothing selected
-            # 1 - Action menu for current unit
-            # 2 - Move
-            # 3 - Act
-            # 4 - Wait
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
-                    if status == 1:
-                        selected_unit = None
-                        status = 0
-
-                    if (status == 2 or status == 3):
-                        status = 1
-
-                    if status == 0:
-                        selected_unit = None
-
-            if status == 0 and obj_unitSelect is not None:
-                selected_unit = obj_unitSelect.handleEvent(event, Units)
-                if selected_unit is current_unit:
-                    obj_unitSelect = None
-                    status = 1
-
-
-        # Go back one level on ESCAPE key press
-        #if key[27] == 1 and status == 1:
-        #    status = 0
-
-        #if key[27] == 1 and (status == 2 or status == 3):
-        #    status = 1
 
         # Get next unit's turn
         if current_unit is None:
@@ -327,11 +257,67 @@ def game_loop():
             selected_unit = current_unit
             status = 1
 
-        # Allow unit selection
-        #if status == 0:
-        #    selected_unit = unit_select(area.screen, Units)
-        #    if selected_unit is current_unit:
-        #        status = 1
+        if status == 0 and obj_unitSelect is None:
+            obj_unitSelect = unitSelect(Units)
+
+        if status == 1 and obj_doMove is None:
+            obj_doMove = doMove(current_unit, Units, area)
+
+        for event in pygame.event.get():
+            # only do something if the event is of type QUIT
+            if event.type == pygame.QUIT:
+                # change the value to False, to exit the main loop
+                running = False
+                quit_game()
+
+            if status == 0 and obj_unitSelect is not None:
+                selected_unit = obj_unitSelect.handleEvent(event, Units)
+                if selected_unit is current_unit:
+                    obj_unitSelect = None
+                    status = 1
+
+            if status == 2 and current_unit:
+                current_unit = obj_doMove.handleEvent(event, current_unit, area)
+                if current_unit.moved:
+                    obj_doMove = None
+                    status = 1
+
+            # Go back in menus
+            # 0 - Nothing selected
+            # 1 - Action menu for current unit
+            # 2 - Move
+            # 3 - Act
+            # 4 - Wait
+            if event.type == pygame.KEYUP:
+                if event.key == pygame.K_ESCAPE:
+                    if status == 0:
+                        selected_unit = None
+
+                    if status == 1:
+                        selected_unit = None
+                        status = 0
+
+                    if (status == 2 or status == 3):
+                        status = 1
+
+
+
+            #if current_unit and status == 1:
+            #    r = menu_unit_main(area, current_unit, *(grid_to_pixel(current_unit.x + 1, current_unit.y - 0.3)))
+            #    if r[0]:
+            #        # Move
+            #        status = 2
+            #    if r[1]:
+            #        # Act
+            #        status = 3
+            #    if r[2]:
+            #        # Wait
+            #        status = 4
+            #    if r[3]:
+            #        selected_unit = None
+            #        status = 0
+            #        # Go up menu
+
 
 
         # Draw the map
@@ -366,13 +352,11 @@ def game_loop():
             area.screen.blit(u.image, grid_to_pixel(u.x, u.y))
 
 
+        if obj_doMove and status == 2:
+            obj_doMove.draw(area)
+
         pygame.display.update()
 
-        if current_unit and status == 2:
-            current_unit, tmp = do_move(area, current_unit, Units)
-            if tmp:
-                status = 1
-                tmp = False
 
         if current_unit and status == 1:
             r = menu_unit_main(area, current_unit, *(grid_to_pixel(current_unit.x + 1, current_unit.y - 0.3)))
@@ -416,6 +400,7 @@ def game_loop():
                 current_unit.acted = False
                 current_unit.boosted = False
                 current_unit = None
+                obj_doMove = None
 
 
         #area.screen.blit(one.image, grid_to_pixel(one.x, one.y))
