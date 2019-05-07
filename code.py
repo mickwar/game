@@ -61,84 +61,143 @@ class clickTest():
 
 
 # Creates a pop up menu for unit action selection
-def menu_unit_main(gameDisplay, current_unit, x, y, w = 100, h = 110):
-    # w and h are parameters, but as of now, they are treated as fixed constants
-    # (meaning other relevant arguments are hard coded)
+class menuUnitMain():
 
-    COLOR_ENABLED = (200, 230, 216)
-    COLOR_DISABLED = (64, 64, 64)
-
-    # Create buttons and check whether unit has moved or acted
-    if not current_unit.moved:
-        b_move = pygbutton.PygButton(
-            rect = (x + 5, y + 5, 90, 30),
+    def __init__(self, unit, w = 100, h = 135):
+        # w and h are parameters, but as of now, they are treated as fixed constants
+        # (meaning other relevant arguments are hard coded)
+        self.COLOR_ENABLED = (200, 230, 216)
+        self.COLOR_DISABLED = (64, 64, 64)
+        self.x, self.y = grid_to_pixel(unit.x + 1, unit.y - 0.3)
+        self.w = w
+        self.h = h
+        # Create buttons
+        self.b_move = pygbutton.PygButton(
+            rect = (0,0,90,30),
             caption = "Move (M)",
-            bgcolor = COLOR_ENABLED,
+            bgcolor = self.COLOR_ENABLED,
             fgcolor = (0,0,0),
             hotkeys = pygame.K_m)
-    else:
-        b_move = pygbutton.PygButton(
-            rect = (x + 5, y + 5, 90, 30),
-            caption = "Move (M)",
-            bgcolor = COLOR_DISABLED,
-            fgcolor = (0,0,0),
-            hotkeys = [])
-
-    if not current_unit.acted:
-        # enabled
-        b_attack = pygbutton.PygButton(
-            rect = (x + 5, y + 5 + 30 + 5, 90, 30),
+        self.b_attack = pygbutton.PygButton(
+            rect = (0,0,90,30),
             caption = "Act (A)",
-            bgcolor = COLOR_ENABLED,
+            bgcolor = self.COLOR_ENABLED,
             fgcolor = (0,0,0),
             hotkeys = pygame.K_a)
-    else:
-        # disabled
-        b_attack = pygbutton.PygButton(
-            rect = (x + 5, y + 5 + 30 + 5, 90, 30),
-            caption = "Act (A)",
-            bgcolor = COLOR_DISABLED,
+        self.b_wait = pygbutton.PygButton(
+            rect = (0,0,90,30),
+            caption = "Wait (W)",
+            bgcolor = self.COLOR_ENABLED,
             fgcolor = (0,0,0),
-            hotkeys = [])
+            hotkeys = pygame.K_w)
+        self.b_bpdec = pygbutton.PygButton(
+            rect = (0,0,30,20),
+            caption = "-",
+            bgcolor = self.COLOR_ENABLED,
+            fgcolor = (0,0,0),
+            hotkeys = pygame.K_z)
+        self.b_bpinc = pygbutton.PygButton(
+            rect = (0,0,30,20),
+            caption = "+",
+            bgcolor = self.COLOR_ENABLED,
+            fgcolor = (0,0,0),
+            hotkeys = pygame.K_x)
 
-    # Can always wait
-    b_wait = pygbutton.PygButton(
-        rect = (x + 5, y + 5 + 30 + 5 + 30 + 5, 90, 30),
-        caption = "Wait (W)",
-        bgcolor = COLOR_ENABLED,
-        fgcolor = (0,0,0),
-        hotkeys = pygame.K_w)
+        # Text on the menu
+        self.t_bpsurf = pygame.font.SysFont("Arial", 12).render("BP", True, (0,0,0))
+        self.t_bprect = self.t_bpsurf.get_rect()
+        self.t_bprect.center = (self.x + (self.w/2), self.y + 120)
 
-    show = True
-    while show:
-        # Display the menu at given coordinates
-        # Add buttons
-        pygame.draw.rect(gameDisplay.screen, (128, 128, 0), (x, y, w, h))
-        r = [0, 0, 0, 0]
-        for event in pygame.event.get():
-            if [e for e in ['left_click', 'hotkeyup'] if e in b_move.handleEvent(event)]:
-                r[0] = 1
-                show = False
-            if [e for e in ['left_click', 'hotkeyup'] if e in b_attack.handleEvent(event)]:
-                r[1] = 1
-                show = False
-            if [e for e in ['left_click', 'hotkeyup'] if e in b_wait.handleEvent(event)]:
-                r[2] = 1
-                show = False
-            if event.type == pygame.KEYUP:
-                if event.key == pygame.K_ESCAPE:
-                    r[3] = 1
-                    show = False
+        self.update(unit)
 
-        b_move.draw(gameDisplay.screen)
-        b_attack.draw(gameDisplay.screen)
-        b_wait.draw(gameDisplay.screen)
-        pygame.display.update()
+    def handleEvent(self, event, unit):
+        # Also checks logic for whether the unit in its current state
+        # can perform the selected action
+        if [e for e in ['left_click', 'hotkeyup'] if e in self.b_move.handleEvent(event)]:
+            if not unit.moved:
+                return 'move'
 
-    if r[0] > 0 and r[1] > 0:
-        r[1] = 0
+        if [e for e in ['left_click', 'hotkeyup'] if e in self.b_attack.handleEvent(event)]:
+            if not unit.acted:
+                return 'attack'
 
-    return r
+        if [e for e in ['left_click', 'hotkeyup'] if e in self.b_wait.handleEvent(event)]:
+            return 'wait'
+
+        if [e for e in ['left_click', 'hotkeyup'] if e in self.b_bpdec.handleEvent(event)]:
+            if unit.boost_count > 0:
+                return 'bpdec'
+
+        if [e for e in ['left_click', 'hotkeyup'] if e in self.b_bpinc.handleEvent(event)]:
+            if unit.stat_bp - unit.boost_count > 0 and unit.boost_count < 3:
+                return 'bpinc'
+
+        if event.type == pygame.KEYUP:
+            if event.key == pygame.K_ESCAPE:
+                return 'escape'
+
+        return None
+
+    def draw(self, gameDisplay):
+        # Draw rects and buttons
+        pygame.draw.rect(gameDisplay.screen, (128, 128, 0), (self.x, self.y, self.w, self.h))
+        self.b_move.draw(gameDisplay.screen)
+        self.b_attack.draw(gameDisplay.screen)
+        self.b_wait.draw(gameDisplay.screen)
+
+        self.b_bpdec.draw(gameDisplay.screen)
+        self.b_bpinc.draw(gameDisplay.screen)
+
+        gameDisplay.screen.blit(self.t_bpsurf, self.t_bprect)
+
+    def update(self, unit):
+        # There is something strange with changing the width and height
+        # of the buttons, the Rect changes, but width/height are affected
+        # in a strange way (change the values in _propSetRect())
+
+        # Update position of menu
+        self.x, self.y = grid_to_pixel(unit.x + 1, unit.y - 0.3)
+
+        # move
+        self.b_move._propSetRect(  pygame.Rect(self.x + 5,  self.y + 5,   90, 30))
+        if not unit.moved:
+            self.b_move._propSetBgColor(self.COLOR_ENABLED)
+        else:
+            self.b_move._propSetBgColor(self.COLOR_DISABLED)
+
+        # act
+        self.b_attack._propSetRect(pygame.Rect(self.x + 5,  self.y + 40,  90, 30))
+        if not unit.acted:
+            self.b_attack._propSetBgColor(self.COLOR_ENABLED)
+        else:
+            self.b_attack._propSetBgColor(self.COLOR_DISABLED)
+
+        # wait
+        self.b_wait._propSetRect(  pygame.Rect(self.x + 5,  self.y + 75,  90, 30))
+
+        # boost decrease
+        self.b_bpdec._propSetRect( pygame.Rect(self.x + 5,  self.y + 110, 30, 20))
+        if unit.boost_count > 0:
+            self.b_bpdec._propSetBgColor(self.COLOR_ENABLED)
+        else:
+            self.b_bpdec._propSetBgColor(self.COLOR_DISABLED)
+
+        # boost increase
+        self.b_bpinc._propSetRect( pygame.Rect(self.x + 65, self.y + 110, 30, 20))
+        if unit.stat_bp - unit.boost_count > 0 and unit.boost_count < 3:
+            self.b_bpinc._propSetBgColor(self.COLOR_ENABLED)
+        else:
+            self.b_bpinc._propSetBgColor(self.COLOR_DISABLED)
+
+        self.t_bprect.center = (self.x + (self.w/2), self.y + 120)
+
+        # Update the buttons
+        self.b_move._update()
+        self.b_attack._update()
+        self.b_wait._update()
+        self.b_bpdec._update()
+        self.b_bpinc._update()
+
 
 
 # For waiting for user to select movement square
@@ -240,6 +299,7 @@ def game_loop():
     running = True
 
     obj_unitSelect = None
+    obj_menuUnitMain = None
     obj_doMove = None
      
     # main loop
@@ -253,16 +313,25 @@ def game_loop():
             current_unit.get_paths(Units, area)
             current_unit.moved = False
             current_unit.acted = False
-            current_unit.boosted = False
+            #current_unit.boosted = False
+            current_unit.boost_count = 0
             selected_unit = current_unit
             status = 1
 
+        # Check the status to determine which classes need to be instantiated
         if status == 0 and obj_unitSelect is None:
             obj_unitSelect = unitSelect(Units)
 
         if status == 1 and obj_doMove is None:
             obj_doMove = doMove(current_unit, Units, area)
 
+        if status == 1 and obj_menuUnitMain is None:
+            obj_menuUnitMain = menuUnitMain(current_unit)
+
+        if obj_menuUnitMain:
+            obj_menuUnitMain.update(current_unit)
+
+        # Pass events to the appropriate class based on the status
         for event in pygame.event.get():
             # only do something if the event is of type QUIT
             if event.type == pygame.QUIT:
@@ -301,22 +370,24 @@ def game_loop():
                         status = 1
 
 
+            if current_unit and status == 1:
+                # Valid inputs are tested in .handleEvent
+                r = obj_menuUnitMain.handleEvent(event, current_unit)
+                if r == 'move':
+                    status = 2
+                elif r == 'attack':
+                    status = 3
+                elif r == 'wait':
+                    status = 4
+                elif r == 'bpdec':
+                    current_unit.boost_count -= 1
+                elif r == 'bpinc':
+                    current_unit.boost_count += 1
+                elif r == 'escape':
+                    status = 0
 
-            #if current_unit and status == 1:
-            #    r = menu_unit_main(area, current_unit, *(grid_to_pixel(current_unit.x + 1, current_unit.y - 0.3)))
-            #    if r[0]:
-            #        # Move
-            #        status = 2
-            #    if r[1]:
-            #        # Act
-            #        status = 3
-            #    if r[2]:
-            #        # Wait
-            #        status = 4
-            #    if r[3]:
-            #        selected_unit = None
-            #        status = 0
-            #        # Go up menu
+                if r:
+                    obj_menuUnitMain.update(current_unit)
 
 
 
@@ -351,28 +422,15 @@ def game_loop():
             # Draw each unit
             area.screen.blit(u.image, grid_to_pixel(u.x, u.y))
 
-
+        # Draw the move possibilities
         if obj_doMove and status == 2:
             obj_doMove.draw(area)
 
+        # Draw the action menu
+        if obj_menuUnitMain and status == 1:
+            obj_menuUnitMain.draw(area)
+
         pygame.display.update()
-
-
-        if current_unit and status == 1:
-            r = menu_unit_main(area, current_unit, *(grid_to_pixel(current_unit.x + 1, current_unit.y - 0.3)))
-            if r[0]:
-                # Move
-                status = 2
-            if r[1]:
-                # Act
-                status = 3
-            if r[2]:
-                # Wait
-                status = 4
-            if r[3]:
-                selected_unit = None
-                status = 0
-                # Go up menu
 
         if current_unit:
             if current_unit.moved and status == 2:
@@ -391,16 +449,19 @@ def game_loop():
                 if current_unit.moved and current_unit.acted:
                     current_unit.stat_ct = max(0, current_unit.stat_ct - 100)
 
-                if not current_unit.boosted:
+                if current_unit.boost_count == 0:
                     current_unit.stat_bp = min(current_unit.base_bp_max, current_unit.stat_bp + 1)
 
                 # Reset
                 status = 1
                 current_unit.moved = False
                 current_unit.acted = False
-                current_unit.boosted = False
+                #current_unit.boosted = False
+                current_unit.stat_bp -= current_unit.boost_count
+                current_unit.boost_count = 0
                 current_unit = None
                 obj_doMove = None
+                obj_menuUnitMain = None
 
 
         #area.screen.blit(one.image, grid_to_pixel(one.x, one.y))
