@@ -29,6 +29,7 @@ class Unit(pygame.sprite.Sprite):
         self.stat_bp = 1
         self.stat_ct = 0
         self.stat_shield = self.base_shield_max
+        self.boost_count = 0
         # Weaknesses
         self.weakness = []
         # Action properties
@@ -202,3 +203,17 @@ def show_stats(gameDisplay, unit):
 # - Status effects last BP more turns (as opposed to strengthening the effects)
 # - Restore shield?
 # - Temporarily guard against a weakness?
+# - Increase starting CT after waiting?
+
+# Formulae
+# Attack
+#   DMG = CEIL((2 * STR - VIT) * P)
+#
+#           0.25    if Shield > 0 and not weak
+#       P = 0.50    if Shield > 0 and weak
+#           0.90    if Shield == 0 and not weak
+#           1.00    if Shield == 0 and weak
+#
+#   ACC depends on defender's direction and class
+#
+
