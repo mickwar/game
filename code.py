@@ -11,7 +11,7 @@ clock = pygame.time.Clock()
 
 
 # Class for testing left click
-class clickTest(object):
+class clickTest():
     def __init__(self, rect):
         self._rect = pygame.Rect(rect)
         self.mouseDown = False
@@ -195,26 +195,44 @@ def unit_order(Units):
 
 
 # During no selection
-def unit_select(gameDisplay, Units):
+#def unit_select(gameDisplay, Units):
+#
+#    clickables = []
+#    for u in Units:
+#        clickables.append(clickTest(grid_to_pixel(u.x, u.y) + \
+#                  (GRID_TO_PIXEL, GRID_TO_PIXEL)))
+#
+#    selected_unit = None
+#    show = True
+#    while show:
+#        for event in pygame.event.get():
+#            for i in clickables:
+#                if i.handleEvent(event):
+#                    show = False
+#                    selected_unit = Units[clickables.index(i)]
+#                    break
+#
+#        pygame.display.update()
+#
+#    return selected_unit
 
-    clickables = []
-    for u in Units:
-        clickables.append(clickTest(grid_to_pixel(u.x, u.y) + \
-                  (GRID_TO_PIXEL, GRID_TO_PIXEL)))
+# During no selection
+class unitSelect():
 
-    selected_unit = None
-    show = True
-    while show:
-        for event in pygame.event.get():
-            for i in clickables:
-                if i.handleEvent(event):
-                    show = False
-                    selected_unit = Units[clickables.index(i)]
-                    break
+    def __init__(self, Units):
+        self.selected = None
+        self.clickables = []
+        for u in Units:
+            self.clickables.append(clickTest(grid_to_pixel(u.x, u.y) + \
+                      (GRID_TO_PIXEL, GRID_TO_PIXEL)))
 
-        pygame.display.update()
+    def handleEvent(self, event, Units):
+        for c in self.clickables:
+            if c.handleEvent(event):
+                self.selected = Units[self.clickables.index(c)]
+                break
 
-    return selected_unit
+        return self.selected
 
 
 # A temporary initialization function for spawning units
@@ -250,11 +268,15 @@ def game_loop():
 
     # define a variable to control the main loop
     running = True
+
+    obj_unitSelect = None
      
     # main loop
     while running:
 
         clock.tick(30)
+        if status == 0 and obj_unitSelect is None:
+            obj_unitSelect = unitSelect(Units)
 
         for event in pygame.event.get():
             # only do something if the event is of type QUIT
@@ -281,6 +303,11 @@ def game_loop():
                     if status == 0:
                         selected_unit = None
 
+            if status == 0 and obj_unitSelect is not None:
+                selected_unit = obj_unitSelect.handleEvent(event, Units)
+                if selected_unit is current_unit:
+                    obj_unitSelect = None
+                    status = 1
 
 
         # Go back one level on ESCAPE key press
@@ -301,10 +328,10 @@ def game_loop():
             status = 1
 
         # Allow unit selection
-        if status == 0:
-            selected_unit = unit_select(area.screen, Units)
-            if selected_unit is current_unit:
-                status = 1
+        #if status == 0:
+        #    selected_unit = unit_select(area.screen, Units)
+        #    if selected_unit is current_unit:
+        #        status = 1
 
 
         # Draw the map
