@@ -50,7 +50,9 @@ def unit_create(area):
 def game_loop():
 
     # create a surface on screen that has the size of 240 x 180
-    area = Field(10, 10, 30)
+    area = Field(10, 10, 20)
+
+    tree = pygame.image.load("assets/tree.png")
 
     # initialize some units
     Units = unit_create(area)
@@ -67,6 +69,7 @@ def game_loop():
     obj_unitSelect = None
     obj_menuUnitMain = None
     obj_doMove = None
+    obj_doAttack = None
      
     # main loop
     while running:
@@ -97,6 +100,18 @@ def game_loop():
 
         if status == 1 and obj_menuUnitMain is None:
             obj_menuUnitMain = menuUnitMain(current_unit)
+
+
+        if status == 3 and obj_doAttack is None:
+            obj_doAttack = doAttack(current_unit)
+
+        if obj_doAttack:
+            if obj_doAttack.boost_count != current_unit.boost_count:
+                obj_doAttack = doAttack(current_unit)
+
+        if status != 3 and obj_doAttack:
+            obj_doAttack = None
+
 
         #if obj_menuUnitMain:
         #    obj_menuUnitMain.update(current_unit)
@@ -136,8 +151,29 @@ def game_loop():
                 if current_unit.moved:
                     obj_doMove = None
                     status = 1
-                    if current_unit.boost_count > 0:
+                    # Check if boosted
+                    if current_unit.boost_count > 0 and not current_unit.boosted:
                         current_unit.boosted = True
+
+            if status == 3 and current_unit is not None and obj_doAttack:
+                attacked_unit = obj_doAttack.handleEvent(event, current_unit, Units)
+                if attacked_unit == 'nothing':
+                    # Nothing was attacked
+                    status = 1
+                    obj_doAttack = None
+                    attacked_unit = None
+                elif attacked_unit:
+                    # A unit was attacked
+                    status = 1
+                    obj_doAttack = None
+                    attacked_unit = func_attack(current_unit, attacked_unit)
+                    # Check if boosted
+                    if current_unit.boost_count > 0 and not current_unit.boosted:
+                        current_unit.boosted = True
+                        for i in range(current_unit.boost_count):
+                            attacked_unit = func_attack(current_unit, attacked_unit)
+                    attacked_unit = None
+
 
             # Go back in menus
             # 0 - Nothing selected
@@ -158,20 +194,37 @@ def game_loop():
                         status = 1
 
 
+        # Remove a dead unit
+        for u in Units:
+            if u.stat_hp <= 0:
+                Units.remove(u)
 
 
         # Draw the map
         area.screen.fill((16, 16, 16))
+        pygame.draw.rect(area.screen, (24, 96, 24),
+            (GRID_OFFSET, GRID_OFFSET, 500, 500))
+
+
         for g in area.grid:
-            pygame.draw.rect(area.screen, (48, 48, 48),
+            pygame.draw.rect(area.screen, (48, 128, 48),
                 grid_to_pixel(g[0], g[1]) + \
                 grid_to_pixel(1.5, 1.5))
+            #pygame.draw.rect(area.screen, (48, 48, 48),
+            #    grid_to_pixel(g[0], g[1]) + \
+            #    grid_to_pixel(1.5, 1.5))
+
+        for t in area.trees:
+            area.screen.blit(tree, grid_to_pixel(*t))
 
 
         # Show unit stats
         if selected_unit:
             show_stats(area.screen, selected_unit)
 
+        # Draw the attack possibilities
+        if status == 3 and obj_doAttack:
+            obj_doAttack.draw(area)
 
         # Draw the units
         for u in Units:
@@ -200,6 +253,7 @@ def game_loop():
         if status == 2 and obj_doMove:
             obj_doMove.draw(area)
 
+
         # Update the display
         pygame.display.update()
 
@@ -217,7 +271,13 @@ def game_loop():
                 if current_unit.moved and current_unit.acted:
                     current_unit.stat_ct = max(0, current_unit.stat_ct - 100)
 
-                if current_unit.boost_count == 0:
+                # Boosting on a wait
+                if current_unit.boost_count > 0 and not current_unit.boosted:
+                    current_unit.stat_ct += current_unit.boost_count * current_unit.base_speed
+                    current_unit.boosted = True
+
+                # Increase boost if unit didn't boost
+                if not current_unit.boosted:
                     current_unit.stat_bp = min(current_unit.base_bp_max, current_unit.stat_bp + 1)
 
                 # Reset

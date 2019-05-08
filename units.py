@@ -172,7 +172,38 @@ class doMove():
 
     def draw(self, gameDisplay):
         for c in self.clickables:
-            c.draw(gameDisplay.screen)
+            c.draw(gameDisplay.screen, (128, 96, 64))
+
+
+# For waiting for user to select movement square
+class doAttack():
+
+    def __init__(self, unit):
+        self.clickables = []
+        self.boost_count = unit.boost_count
+        directions = [(0,1), (1,0), (0,-1), (-1,0)]
+        for d in directions:
+            self.clickables.append(clickTest(
+                grid_to_pixel(unit.x + d[0] + 5/GRID_TO_PIXEL, unit.y + d[1] + 5/GRID_TO_PIXEL) + \
+                (GRID_TO_PIXEL - 10, GRID_TO_PIXEL - 10)))
+
+    def handleEvent(self, event, unit, Units):
+        attacked_unit = None
+        for c in self.clickables:
+            if c.handleEvent(event):
+                pos = pixel_to_grid(*pygame.mouse.get_pos())
+                attacked_unit = 'nothing'
+                for u in Units:
+                    if pos == (u.x, u.y):
+                        attacked_unit = u
+                unit.acted = True
+                break
+
+        return attacked_unit
+
+    def draw(self, gameDisplay):
+        for c in self.clickables:
+            c.draw(gameDisplay.screen, (64, 0, 16))
 
 
 
@@ -242,6 +273,24 @@ def unit_order(Units):
         # Repeat until a unit reaches 100
         return unit_order(Units)
 
+# Ceiling function
+def ceil(a, b = 1): return int(-(-a // b))
+
+# Function for attacking a unit
+def func_attack(attacker, defender):
+    if defender.stat_shield > 0 and [] not in defender.weakness:
+        p = 0.25
+    if defender.stat_shield > 0 and [] in defender.weakness:
+        p = 0.50
+    if defender.stat_shield == 0 and [] not in defender.weakness:
+        p = 0.90
+    if defender.stat_shield == 0 and [] in defender.weakness:
+        p = 1.00
+
+    p = 1.00
+    dmg = ceil( (2*attacker.base_strength - defender.base_vitality) * p)
+    defender.stat_hp -= max(0, dmg)
+    return defender
 
 # Different attack possibilities:
 # Shield > 0, not weak: 25% DMG
