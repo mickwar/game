@@ -14,11 +14,13 @@ class Field():
         self.xrange = (1, x)
         self.yrange = (1, y)
         self.grid = []
+        self.trees = []
         for i in range(1, x+1):
             for j in range(1, y+1):
                 self.grid.append((i,j))
         while n > 0:
             n = n - 1
-            self.grid.pop(random.randint(0, len(self.grid) - 1))
+            h = self.grid.pop(random.randint(0, len(self.grid) - 1))
+            self.trees.append(h)
         self.screen = pygame.display.set_mode(grid_to_pixel(self.xrange[1]+6.5, self.yrange[1]+2.0))
 

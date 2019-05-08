@@ -46,5 +46,5 @@ class clickTest():
 
         return isClicked
 
-    def draw(self, gameDisplay):
-        pygame.draw.rect(gameDisplay, (0, 128, 0), self._rect)
+    def draw(self, gameDisplay, COLOR = (0, 128, 0)):
+        pygame.draw.rect(gameDisplay, COLOR, self._rect)
