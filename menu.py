@@ -120,11 +120,11 @@ class menuUnitMain():
             return 'wait'
 
         if [e for e in ['left_click', 'hotkeyup'] if e in self.b_bpdec.handleEvent(event)]:
-            if unit.boost_count > 0:
+            if unit.boost_count > 0 and not unit.boosted:
                 return 'bpdec'
 
         if [e for e in ['left_click', 'hotkeyup'] if e in self.b_bpinc.handleEvent(event)]:
-            if unit.stat_bp - unit.boost_count > 0 and unit.boost_count < 3:
+            if unit.stat_bp - unit.boost_count > 0 and unit.boost_count < 3 and not unit.boosted:
                 return 'bpinc'
 
         if event.type == pygame.KEYUP:
@@ -172,14 +172,14 @@ class menuUnitMain():
 
         # boost decrease
         self.b_bpdec._propSetRect( pygame.Rect(self.x + 5,  self.y + 110, 30, 20))
-        if unit.boost_count > 0:
+        if unit.boost_count > 0 and not unit.boosted:
             self.b_bpdec._propSetBgColor(self.COLOR_ENABLED)
         else:
             self.b_bpdec._propSetBgColor(self.COLOR_DISABLED)
 
         # boost increase
         self.b_bpinc._propSetRect( pygame.Rect(self.x + 65, self.y + 110, 30, 20))
-        if unit.stat_bp - unit.boost_count > 0 and unit.boost_count < 3:
+        if unit.stat_bp - unit.boost_count > 0 and unit.boost_count < 3 and not unit.boosted:
             self.b_bpinc._propSetBgColor(self.COLOR_ENABLED)
         else:
             self.b_bpinc._propSetBgColor(self.COLOR_DISABLED)

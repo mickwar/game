@@ -37,6 +37,7 @@ class Unit(pygame.sprite.Sprite):
         # Weaknesses
         self.weakness = []
         # Action properties
+        self.paths = None
         self.moved = False
         self.acted = False
         self.boosted = False
@@ -58,62 +59,66 @@ class Unit(pygame.sprite.Sprite):
         self.x = min(max(Map.xrange[0], self.x + dx), Map.xrange[1])
         self.y = min(max(Map.yrange[0], self.y + dy), Map.yrange[1])
 
-    # Can probably simplify to not need Map since we can verify the possible
-    # moves outside of the class, unless the get_paths method should be part
-    # of this class?
-    def move_exact(self, dx, dy, Map):
-        if abs(self.x - dx) + abs(self.y - dy) <= self.base_move and \
-            Map.xrange[0] <= dx and dx <= Map.xrange[1] and \
-            Map.yrange[0] <= dy and dy <= Map.yrange[1]:
-            self.x = dx
-            self.y = dy
+    def move_exact(self, x, y, Map):
+        if self.path_ends:
+            if (x, y) in self.path_ends:
+                self.x = x
+                self.y = y
 
     def get_paths(self, Units, Map):
-        self.paths = [(self.x, self.y)]
         ally_locs = []
-        directions = [(-1, 0), (0, -1), (1, 0), (0, 1)]
-        for p in self.paths:
-            # distance under current path from origin
-            dx = p[0] - self.paths[0][0]
-            dy = p[1] - self.paths[0][1]
-            # Break out of loop if total distance exceeds move limit
-            if abs(dx) + abs(dy) >= self.base_move:
-                break
+        directions = [(0,1), (1,0), (0,-1), (-1,0)]
+        self.paths = [[[]]] * (self.base_move + self.boost_count + 1)
+        self.paths[0] = [[(self.x, self.y)]]
+
+        for i in range(self.base_move + self.boost_count):
+            tmp = []
             for d in directions:
-                # Add current location p to directional movement d
-                tmp = tuple(map(sum, zip(p, d)))
-                try:
-                    # Only proceed if the proposed location hasn't been traversed before
-                    self.paths.index(tmp)
-                except:
-                    test_flag = True
-                    # check not to collide with other units
-                    # can't pass enemies, but can pass allies
+                for p in self.paths[i]:
+                    tmp_add = tuple(map(sum, zip(p[-1], d)))
+                    add_flag = True
+                    if tmp_add in [t[-1] for t in tmp]:
+                        add_flag = False
+
+                    if tmp_add not in Map.grid:
+                        add_flag = False
+
                     for u in Units:
-                        if tmp == (u.x, u.y):
+                        if tmp_add == (u.x, u.y):
                             if self.team != u.team:
-                                test_flag = False
+                                add_flag = False
                             else:
-                                ally_locs.append(tmp)
-                    if test_flag:
-                        try:
-                            # check if proposed move location is a valid grid point on the map
-                            # (think of the missing spots as impassable trees, not holes to jump over)
-                            Map.grid.index(tmp)
-                            self.paths.append(tmp)
-                            #pygame.draw.rect(area.screen, (0, 128, 0),
-                            #    grid_to_pixel(tmp[0] + 1, tmp[1] + 1) + \
-                            #    (GRID_TO_PIXEL-25, GRID_TO_PIXEL-25))
-                        except:
-                            pass
+                                ally_locs.append(tmp_add)
+
+
+                    if add_flag:
+                        tmp.append(p + [tmp_add])
+
+            for j in range(i):
+                tl = [t[-1] for t in tmp]
+                pl = [p[-1] for p in self.paths[j]]
+                rm_ind = [tl.index(t) for t in tl if t in pl]
+                for k in sorted(rm_ind, reverse=True):
+                    del tmp[k]
+
+            self.paths[i+1] = tmp
 
         # Remove any ally locations (so passable but can't end on it)
         for a in ally_locs:
-            if a in self.paths:
-                self.paths.pop(self.paths.index(a))
+            for i in reversed(range(len(self.paths))):
+                for j in reversed(range(len(self.paths[i]))):
+                    if a == self.paths[i][j][-1]:
+                        del self.paths[i][j]
 
         # Don't include current location as allowable place to move
         self.paths.pop(0)
+
+        self.path_ends = []
+        for path in self.paths:
+            for p in path:
+                self.path_ends.append(p[-1])
+
+
 
 
 class Type1():
@@ -147,8 +152,9 @@ class doMove():
 
     def __init__(self, unit, Units, gameDisplay):
         unit.get_paths(Units, gameDisplay)
-        self.paths = unit.paths
+        self.paths = unit.path_ends
         self.clickables = []
+        self.boost_count = unit.boost_count
         for p in self.paths:
             self.clickables.append(clickTest(
                 grid_to_pixel(p[0] + 5/GRID_TO_PIXEL, p[1] + 5/GRID_TO_PIXEL) + \

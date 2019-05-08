@@ -11,23 +11,6 @@ from clickTest import *
 clock = pygame.time.Clock()
 
 
-# Get unit next in turn order
-def unit_order(Units):
-    # Sort first so highest CT will go first
-    sl = sorted(Units, key = lambda x: x.stat_ct, reverse = True)
-    # Check if any unit's CT as reached 100
-    for u in sl:
-        if u.stat_ct >= 100:
-            return u
-    else:
-        # Increase all units CT by SPEED, don't need to use sorted list
-        for u in Units:
-            u.stat_ct += u.base_speed
-
-        # Repeat until a unit reaches 100
-        return unit_order(Units)
-
-
 # During no selection
 class unitSelect():
 
@@ -90,13 +73,13 @@ def game_loop():
 
         clock.tick(30)
 
-        # Get next unit's turn
+        # Get next unit's turn and make sure certain variables are reset
         if current_unit is None:
             current_unit = unit_order(Units)
             current_unit.get_paths(Units, area)
             current_unit.moved = False
             current_unit.acted = False
-            #current_unit.boosted = False
+            current_unit.boosted = False
             current_unit.boost_count = 0
             selected_unit = current_unit
             status = 1
@@ -108,11 +91,15 @@ def game_loop():
         if status == 1 and obj_doMove is None:
             obj_doMove = doMove(current_unit, Units, area)
 
+        if obj_doMove.boost_count != current_unit.boost_count:
+            current_unit.get_paths(Units, area)
+            obj_doMove = doMove(current_unit, Units, area)
+
         if status == 1 and obj_menuUnitMain is None:
             obj_menuUnitMain = menuUnitMain(current_unit)
 
-        if obj_menuUnitMain:
-            obj_menuUnitMain.update(current_unit)
+        #if obj_menuUnitMain:
+        #    obj_menuUnitMain.update(current_unit)
 
         # Pass events to the appropriate class based on the status
         for event in pygame.event.get():
@@ -128,11 +115,29 @@ def game_loop():
                     obj_unitSelect = None
                     status = 1
 
-            if status == 2 and current_unit:
+            if status == 1 and current_unit is not None:
+                # Valid inputs are tested in .handleEvent
+                r = obj_menuUnitMain.handleEvent(event, current_unit)
+                if r == 'move':
+                    status = 2
+                elif r == 'attack':
+                    status = 3
+                elif r == 'wait':
+                    status = 4
+                elif r == 'bpdec':
+                    current_unit.boost_count -= 1
+                elif r == 'bpinc':
+                    current_unit.boost_count += 1
+                elif r == 'escape':
+                    status = 0
+
+            if status == 2 and current_unit is not None:
                 current_unit = obj_doMove.handleEvent(event, current_unit, area)
                 if current_unit.moved:
                     obj_doMove = None
                     status = 1
+                    if current_unit.boost_count > 0:
+                        current_unit.boosted = True
 
             # Go back in menus
             # 0 - Nothing selected
@@ -152,25 +157,6 @@ def game_loop():
                     if (status == 2 or status == 3):
                         status = 1
 
-
-            if current_unit and status == 1:
-                # Valid inputs are tested in .handleEvent
-                r = obj_menuUnitMain.handleEvent(event, current_unit)
-                if r == 'move':
-                    status = 2
-                elif r == 'attack':
-                    status = 3
-                elif r == 'wait':
-                    status = 4
-                elif r == 'bpdec':
-                    current_unit.boost_count -= 1
-                elif r == 'bpinc':
-                    current_unit.boost_count += 1
-                elif r == 'escape':
-                    status = 0
-
-                if r:
-                    obj_menuUnitMain.update(current_unit)
 
 
 
@@ -205,19 +191,18 @@ def game_loop():
             # Draw each unit
             area.screen.blit(u.image, grid_to_pixel(u.x, u.y))
 
-        # Draw the move possibilities
-        if obj_doMove and status == 2:
-            obj_doMove.draw(area)
-
         # Draw the action menu
-        if obj_menuUnitMain and status == 1:
+        if status == 1 and obj_menuUnitMain:
+            obj_menuUnitMain.update(current_unit)
             obj_menuUnitMain.draw(area)
 
+        # Draw the move possibilities
+        if status == 2 and obj_doMove:
+            obj_doMove.draw(area)
+
+        # Update the display
         pygame.display.update()
 
-        if current_unit:
-            if current_unit.moved and status == 2:
-                status = 1
 
         # Finishing a turn
         if current_unit:
@@ -239,7 +224,7 @@ def game_loop():
                 status = 1
                 current_unit.moved = False
                 current_unit.acted = False
-                #current_unit.boosted = False
+                current_unit.boosted = False
                 current_unit.stat_bp -= current_unit.boost_count
                 current_unit.boost_count = 0
                 current_unit = None
