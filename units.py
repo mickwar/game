@@ -7,6 +7,7 @@ from menu import *
 class Unit(pygame.sprite.Sprite):
     def __init__(self, team, name, color, JobPrimary = None, JobSecondary = None):
         pygame.sprite.Sprite.__init__(self)
+        #super().__init__(self)
         self.team = team
         self.image = pygame.image.load(color + "_triangle.png")
         self.rect = self.image.get_rect()
@@ -156,14 +157,20 @@ class doMove():
         self.clickables = []
         self.boost_count = unit.boost_count
         for p in self.paths:
-            self.clickables.append(clickTest(
-                grid_to_pixel(p[0] + 5/GRID_TO_PIXEL, p[1] + 5/GRID_TO_PIXEL) + \
-                (GRID_TO_PIXEL-10, GRID_TO_PIXEL-10)))
+            self.clickables.append(clickTest(gameDisplay, p[0], p[1]))
+            #self.clickables.append(clickTest(
+            #    gameDisplay.grid_to_pixel(p[0] + 5/gameDisplay.GRID_TO_PIXEL, p[1] + 5/gameDisplay.GRID_TO_PIXEL, False) + \
+            #    (gameDisplay.GRID_TO_PIXEL-10, gameDisplay.GRID_TO_PIXEL-10)))
+                #grid_to_pixel(p[0] + 5/GRID_TO_PIXEL, p[1] + 5/GRID_TO_PIXEL) + \
+                #(GRID_TO_PIXEL-10, GRID_TO_PIXEL-10)))
 
     def handleEvent(self, event, unit, gameDisplay):
         for c in self.clickables:
             if c.handleEvent(event):
-                pos = pixel_to_grid(*pygame.mouse.get_pos())
+                pos = pygame.mouse.get_pos()
+                #pos = pixel_to_grid(*pygame.mouse.get_pos())
+                #pos = pixel_to_grid(*tuple(map(sum, zip(pos, (-gameDisplay.pixel_offset[0], -gameDisplay.pixel_offset[1])))))
+                pos = gameDisplay.pixel_to_grid(*pos)
                 unit.move_exact(*pos, gameDisplay)
                 unit.moved = True
                 break
@@ -172,26 +179,28 @@ class doMove():
 
     def draw(self, gameDisplay):
         for c in self.clickables:
-            c.draw(gameDisplay.screen, (128, 96, 64))
+            c.draw(gameDisplay, (128, 96, 64))
+            #c.draw(gameDisplay.screen, (128, 96, 64))
 
 
 # For waiting for user to select movement square
 class doAttack():
 
-    def __init__(self, unit):
+    def __init__(self, gameDisplay, unit):
         self.clickables = []
         self.boost_count = unit.boost_count
         directions = [(0,1), (1,0), (0,-1), (-1,0)]
         for d in directions:
-            self.clickables.append(clickTest(
-                grid_to_pixel(unit.x + d[0] + 5/GRID_TO_PIXEL, unit.y + d[1] + 5/GRID_TO_PIXEL) + \
-                (GRID_TO_PIXEL - 10, GRID_TO_PIXEL - 10)))
+            self.clickables.append(clickTest(gameDisplay, unit.x + d[0], unit.y + d[1]))
+            #self.clickables.append(clickTest(
+            #    grid_to_pixel(unit.x + d[0] + 5/GRID_TO_PIXEL, unit.y + d[1] + 5/GRID_TO_PIXEL) + \
+            #    (GRID_TO_PIXEL - 10, GRID_TO_PIXEL - 10)))
 
-    def handleEvent(self, event, unit, Units):
+    def handleEvent(self, event, gameDisplay, unit, Units):
         attacked_unit = None
         for c in self.clickables:
             if c.handleEvent(event):
-                pos = pixel_to_grid(*pygame.mouse.get_pos())
+                pos = gameDisplay.pixel_to_grid(*pygame.mouse.get_pos())
                 attacked_unit = 'nothing'
                 for u in Units:
                     if pos == (u.x, u.y):
@@ -203,21 +212,24 @@ class doAttack():
 
     def draw(self, gameDisplay):
         for c in self.clickables:
-            c.draw(gameDisplay.screen, (64, 0, 16))
+            c.draw(gameDisplay, (64, 0, 16))
+            #c.draw(gameDisplay.screen, (64, 0, 16))
 
 
 
 # Function for displaying unit stats on the side
 def show_stats(gameDisplay, unit):
-    # HARD CODED
-    rel_x = 600
-    rel_dx = 100
+    # (less) HARD CODED
+    rel_x = 50
+    rel_dx1 = 150
+    rel_dx2 = 150
+    rel_y = gameDisplay.map_h + 12
     rel_dy1 = 21
     rel_dy2 = 11
 
     # Calculate the coordinates
     def xy(n, dx_ind = 0, dy_ind = 0):
-        return ((rel_x + dx_ind * rel_dx, 8 + rel_dy1 * n + dy_ind * rel_dy2))
+        return ((rel_x + dx_ind * rel_dx1, rel_y + rel_dy1 * n + dy_ind * rel_dy2))
 
     myfont = pygame.font.SysFont('Arial', 16)
 
@@ -228,9 +240,12 @@ def show_stats(gameDisplay, unit):
 
     # Specifying the coordinates
     # (The variables are poorly named, not intuitive as to what this is)
-    n_vec = [0, 1, 2, 3, 4, 5, 6, 6, 7, 7, 8, 8]
-    a_vec = [0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1]
-    b_vec = [0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2]
+    #n_vec = [0, 1, 2, 3, 4, 5, 6, 6, 7, 7, 8, 8]
+    #a_vec = [0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1]
+    #b_vec = [0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2]
+    n_vec = [0, 1, 2, 3, 4, 5, 1, 1, 2, 2, 3, 3]
+    a_vec = [0, 0, 0, 0, 0, 0, 1, 1.6, 1, 1.6, 1, 1.6]
+    b_vec = [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
 
     for i in range(len(attr_order)):
         attrs = [a for a in dir(unit) if attr_order[i] in a]
@@ -238,7 +253,7 @@ def show_stats(gameDisplay, unit):
         if [a for a in attrs if "stat_ct" in a]:
             tmp_text = attr_display[i] + ": " + str(getattr(unit, attrs[0])) + " / 100"
             textsurface = myfont.render(str(tmp_text), False, (128, 0, 0))
-            gameDisplay.blit(textsurface, xy(n_vec[i], a_vec[i], b_vec[i]))
+            gameDisplay.screen.blit(textsurface, xy(n_vec[i], a_vec[i], b_vec[i]))
             continue
 
         # If "stat" is found in the attribute, goes on the left of " / ", otherwise just
@@ -247,11 +262,11 @@ def show_stats(gameDisplay, unit):
             tmp_text = attr_display[i] + ": " + str(getattr(unit, attrs[-1])) + \
                 " / " + str(getattr(unit, attrs[0]))
             textsurface = myfont.render(str(tmp_text), False, (128, 0, 0))
-            gameDisplay.blit(textsurface, xy(n_vec[i], a_vec[i], b_vec[i]))
+            gameDisplay.screen.blit(textsurface, xy(n_vec[i], a_vec[i], b_vec[i]))
         else:
             tmp_text = attr_display[i] + ": " + str(getattr(unit, attrs[0]))
             textsurface = myfont.render(str(tmp_text), False, (128, 0, 0))
-            gameDisplay.blit(textsurface, xy(n_vec[i], a_vec[i], b_vec[i]))
+            gameDisplay.screen.blit(textsurface, xy(n_vec[i], a_vec[i], b_vec[i]))
 
 
 # Get unit next in turn order
@@ -312,6 +327,8 @@ def func_attack(attacker, defender):
 # - Restore shield?
 # - Temporarily guard against a weakness?
 # - Increase starting CT after waiting?
+# - Should using a boost on something other than waiting lower the starting CT?
+#       (e.g. 3 BP move and no act reduces CT by 75+5*3 instead of 75?)
 
 # Formulae
 # Attack

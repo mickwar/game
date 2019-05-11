@@ -58,12 +58,12 @@ def main_menu():
 # Creates a pop up menu for unit action selection
 class menuUnitMain():
 
-    def __init__(self, unit, w = 100, h = 135):
+    def __init__(self, gameDisplay, unit, w = 100, h = 135):
         # w and h are parameters, but as of now, they are treated as fixed constants
         # (meaning other relevant arguments are hard coded)
         self.COLOR_ENABLED = (200, 230, 216)
         self.COLOR_DISABLED = (64, 64, 64)
-        self.x, self.y = grid_to_pixel(unit.x + 1, unit.y - 0.3)
+        self.x, self.y = gameDisplay.grid_to_pixel(unit.x + 1, unit.y - 0.3)
         self.w = w
         self.h = h
         # Create buttons
@@ -103,7 +103,7 @@ class menuUnitMain():
         self.t_bprect = self.t_bpsurf.get_rect()
         self.t_bprect.center = (self.x + (self.w/2), self.y + 120)
 
-        self.update(unit)
+        self.update(gameDisplay, unit)
 
     def handleEvent(self, event, unit):
         # Also checks logic for whether the unit in its current state
@@ -145,13 +145,15 @@ class menuUnitMain():
 
         gameDisplay.screen.blit(self.t_bpsurf, self.t_bprect)
 
-    def update(self, unit):
+    def update(self, gameDisplay, unit):
         # There is something strange with changing the width and height
         # of the buttons, the Rect changes, but width/height are affected
         # in a strange way (change the values in _propSetRect())
 
         # Update position of menu
-        self.x, self.y = grid_to_pixel(unit.x + 1, unit.y - 0.3)
+        self.x, self.y = gameDisplay.grid_to_pixel(unit.x + 1, unit.y - 0.3)
+        #self.x += gameDisplay.pixel_offset[0]
+        #self.y += gameDisplay.pixel_offset[1]
 
         # move
         self.b_move._propSetRect(  pygame.Rect(self.x + 5,  self.y + 5,   90, 30))

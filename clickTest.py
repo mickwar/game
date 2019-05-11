@@ -2,11 +2,19 @@ import pygame
 from pygame.locals import *
 
 class clickTest():
-    def __init__(self, rect):
-        self._rect = pygame.Rect(rect)
+    def __init__(self, gameDisplay, x, y, offset = False):
+        self._rect = pygame.Rect(gameDisplay.grid_to_pixel(x, y, offset) + \
+            (gameDisplay.GRID_TO_PIXEL, gameDisplay.GRID_TO_PIXEL))
+        self._rect_orig = self._rect.copy()
         self.mouseDown = False
         self.mouseOverRect = False
         self.lastMouseDownOverRect = False
+    #def __init__(self, rect):
+    #    self._rect = pygame.Rect(rect)
+    #    self._rect_orig = self._rect.copy()
+    #    self.mouseDown = False
+    #    self.mouseOverRect = False
+    #    self.lastMouseDownOverRect = False
 
     # Borrowed heavily from pygbutton's logic
     def handleEvent(self, event):
@@ -46,5 +54,9 @@ class clickTest():
 
         return isClicked
 
+    def update(self, gameDisplay):
+        self._rect = self._rect_orig.move(gameDisplay.pixel_offset[0], gameDisplay.pixel_offset[1])
+
     def draw(self, gameDisplay, COLOR = (0, 128, 0)):
-        pygame.draw.rect(gameDisplay, COLOR, self._rect)
+        self.update(gameDisplay)
+        pygame.draw.rect(gameDisplay.screen, COLOR, self._rect)

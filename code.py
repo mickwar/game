@@ -14,12 +14,13 @@ clock = pygame.time.Clock()
 # During no selection
 class unitSelect():
 
-    def __init__(self, Units):
+    def __init__(self, gameDisplay, Units):
         self.selected = None
         self.clickables = []
         for u in Units:
-            self.clickables.append(clickTest(grid_to_pixel(u.x, u.y) + \
-                      (GRID_TO_PIXEL, GRID_TO_PIXEL)))
+            self.clickables.append(clickTest(gameDisplay, u.x, u.y, False))
+            #self.clickables.append(clickTest(gameDisplay.grid_to_pixel(u.x + gameDisplay.pixel_offset[0] / gameDisplay.GRID_TO_PIXEL, u.y+ gameDisplay.pixel_offset[1] / gameDisplay.GRID_TO_PIXEL) + \
+            #          (gameDisplay.GRID_TO_PIXEL, gameDisplay.GRID_TO_PIXEL)))
 
     def handleEvent(self, event, Units):
         for c in self.clickables:
@@ -28,6 +29,10 @@ class unitSelect():
                 break
 
         return self.selected
+
+    def update(self, gameDisplay):
+        for c in self.clickables:
+            c.update(gameDisplay)
 
 
 # A temporary initialization function for spawning units
@@ -47,10 +52,42 @@ def unit_create(area):
     return Units
 
 
+def draw_units(Units, current_unit, selected_unit, gameDisplay):
+    # Draw the units
+    for u in Units:
+
+        if u is current_unit:
+            # Highlight current unit
+            pygame.draw.rect(gameDisplay.screen, (230, 230, 0),
+                gameDisplay.grid_to_pixel(u.x + 5/gameDisplay.GRID_TO_PIXEL, u.y + 5/gameDisplay.GRID_TO_PIXEL) + \
+                (gameDisplay.GRID_TO_PIXEL-10, gameDisplay.GRID_TO_PIXEL-10))
+
+        elif u is selected_unit:
+            # Highlight selected unit
+            pygame.draw.rect(gameDisplay.screen, (0, 230, 230),
+                gameDisplay.grid_to_pixel(u.x + 5/gameDisplay.GRID_TO_PIXEL, u.y + 5/gameDisplay.GRID_TO_PIXEL) + \
+                (gameDisplay.GRID_TO_PIXEL-10, gameDisplay.GRID_TO_PIXEL-10))
+
+        # Draw each unit
+        gameDisplay.screen.blit(u.image, gameDisplay.grid_to_pixel(u.x, u.y))
+
+
+# Center the screen on the unit (bounded)
+def center_screen(gameDisplay, unit):
+    gameDisplay.pixel_offset = [gameDisplay.map_w/2 - gameDisplay.GRID_TO_PIXEL * (unit.x-0.5),
+        gameDisplay.map_h/2 - gameDisplay.GRID_TO_PIXEL * (unit.y-0.5)]
+    gameDisplay.pixel_offset[0] = max(gameDisplay.map_w - gameDisplay.GRID_TO_PIXEL*gameDisplay.xrange[1] - 100,
+            gameDisplay.pixel_offset[0])
+    gameDisplay.pixel_offset[0] = min(100, gameDisplay.pixel_offset[0])
+    gameDisplay.pixel_offset[1] = max(gameDisplay.map_h - gameDisplay.GRID_TO_PIXEL*gameDisplay.yrange[1] - 100,
+            gameDisplay.pixel_offset[1])
+    gameDisplay.pixel_offset[1] = min(100, gameDisplay.pixel_offset[1])
+    gameDisplay.pixel_offset = tuple(gameDisplay.pixel_offset)
+
+
 def game_loop():
 
-    # create a surface on screen that has the size of 240 x 180
-    area = Field(10, 10, 20)
+    area = Field(30, 30, 300)
 
     tree = pygame.image.load("assets/tree.png")
 
@@ -86,10 +123,11 @@ def game_loop():
             current_unit.boost_count = 0
             selected_unit = current_unit
             status = 1
+            center_screen(area, selected_unit)
 
         # Check the status to determine which classes need to be instantiated
         if status == 0 and obj_unitSelect is None:
-            obj_unitSelect = unitSelect(Units)
+            obj_unitSelect = unitSelect(area, Units)
 
         if status == 1 and obj_doMove is None:
             obj_doMove = doMove(current_unit, Units, area)
@@ -99,11 +137,11 @@ def game_loop():
             obj_doMove = doMove(current_unit, Units, area)
 
         if status == 1 and obj_menuUnitMain is None:
-            obj_menuUnitMain = menuUnitMain(current_unit)
+            obj_menuUnitMain = menuUnitMain(area, current_unit)
 
 
         if status == 3 and obj_doAttack is None:
-            obj_doAttack = doAttack(current_unit)
+            obj_doAttack = doAttack(area, current_unit)
 
         if obj_doAttack:
             if obj_doAttack.boost_count != current_unit.boost_count:
@@ -123,6 +161,27 @@ def game_loop():
                 # change the value to False, to exit the main loop
                 running = False
                 quit_game()
+
+            # Move the playing area
+            area.handleEvent(event)
+
+            if status == 0 and obj_unitSelect and event.type == pygame.KEYUP:
+                if event.key == pygame.K_s:
+                    selected_unit = current_unit
+                    obj_unitSelect = None
+                    status = 1
+                    # Try to center screen to unit
+                    center_screen(area, selected_unit)
+
+            if event.type == pygame.KEYUP:
+                if event.key == pygame.K_c:
+                    if selected_unit:
+                        center_screen(area, selected_unit)
+                    elif current_unit:
+                        center_screen(area, current_unit)
+                    else:
+                        pass
+
 
             if status == 0 and obj_unitSelect is not None:
                 selected_unit = obj_unitSelect.handleEvent(event, Units)
@@ -156,7 +215,7 @@ def game_loop():
                         current_unit.boosted = True
 
             if status == 3 and current_unit is not None and obj_doAttack:
-                attacked_unit = obj_doAttack.handleEvent(event, current_unit, Units)
+                attacked_unit = obj_doAttack.handleEvent(event, area, current_unit, Units)
                 if attacked_unit == 'nothing':
                     # Nothing was attacked
                     status = 1
@@ -200,62 +259,41 @@ def game_loop():
                 Units.remove(u)
 
 
+        # Update
+        if status == 0 and obj_unitSelect:
+            obj_unitSelect.update(area)
+
         # Draw the map
-        area.screen.fill((16, 16, 16))
-        pygame.draw.rect(area.screen, (24, 96, 24),
-            (GRID_OFFSET, GRID_OFFSET, 500, 500))
-
-
-        for g in area.grid:
-            pygame.draw.rect(area.screen, (48, 128, 48),
-                grid_to_pixel(g[0], g[1]) + \
-                grid_to_pixel(1.5, 1.5))
-            #pygame.draw.rect(area.screen, (48, 48, 48),
-            #    grid_to_pixel(g[0], g[1]) + \
-            #    grid_to_pixel(1.5, 1.5))
-
-        for t in area.trees:
-            area.screen.blit(tree, grid_to_pixel(*t))
-
-
-        # Show unit stats
-        if selected_unit:
-            show_stats(area.screen, selected_unit)
+        area.draw()
 
         # Draw the attack possibilities
         if status == 3 and obj_doAttack:
             obj_doAttack.draw(area)
 
         # Draw the units
-        for u in Units:
-
-            if u is current_unit:
-                # Highlight current unit
-                pygame.draw.rect(area.screen, (230, 230, 0),
-                    grid_to_pixel(u.x + 5/GRID_TO_PIXEL, u.y + 5/GRID_TO_PIXEL) + \
-                    (GRID_TO_PIXEL-10, GRID_TO_PIXEL-10))
-
-            elif u is selected_unit:
-                # Highlight selected unit
-                pygame.draw.rect(area.screen, (0, 230, 230),
-                    grid_to_pixel(u.x + 5/GRID_TO_PIXEL, u.y + 5/GRID_TO_PIXEL) + \
-                    (GRID_TO_PIXEL-10, GRID_TO_PIXEL-10))
-
-            # Draw each unit
-            area.screen.blit(u.image, grid_to_pixel(u.x, u.y))
+        draw_units(Units, current_unit, selected_unit, area)
 
         # Draw the action menu
         if status == 1 and obj_menuUnitMain:
-            obj_menuUnitMain.update(current_unit)
+            obj_menuUnitMain.update(area, current_unit)
             obj_menuUnitMain.draw(area)
 
         # Draw the move possibilities
         if status == 2 and obj_doMove:
             obj_doMove.draw(area)
 
+        # Side bar
+        # Show unit stats
+        pygame.draw.rect(area.screen, (16, 16, 16), (0, area.map_h, area.map_w, area.side_h))
+        if selected_unit:
+            show_stats(area, selected_unit)
+
+
 
         # Update the display
         pygame.display.update()
+        #pygame.display.update((25, 25, 500, 500))
+        #pygame.display.update((550, 0, 500, 500))
 
 
         # Finishing a turn
