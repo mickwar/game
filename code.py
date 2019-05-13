@@ -87,7 +87,7 @@ def center_screen(gameDisplay, unit):
 
 def game_loop():
 
-    area = Field(30, 30, 300)
+    area = Field(15, 10, 50)
 
     tree = pygame.image.load("assets/tree.png")
 
@@ -107,6 +107,8 @@ def game_loop():
     obj_menuUnitMain = None
     obj_doMove = None
     obj_doAttack = None
+
+    animations = []
      
     # main loop
     while running:
@@ -225,12 +227,14 @@ def game_loop():
                     # A unit was attacked
                     status = 1
                     obj_doAttack = None
-                    attacked_unit = func_attack(current_unit, attacked_unit)
+                    attacked_unit, ani = func_attack(current_unit, attacked_unit, 0)
+                    animations.append(ani)
                     # Check if boosted
                     if current_unit.boost_count > 0 and not current_unit.boosted:
                         current_unit.boosted = True
                         for i in range(current_unit.boost_count):
-                            attacked_unit = func_attack(current_unit, attacked_unit)
+                            attacked_unit, ani = func_attack(current_unit, attacked_unit, (i+1)*5)
+                            animations.append(ani)
                     attacked_unit = None
 
 
@@ -274,7 +278,7 @@ def game_loop():
         draw_units(Units, current_unit, selected_unit, area)
 
         # Draw the action menu
-        if status == 1 and obj_menuUnitMain:
+        if status == 1 and obj_menuUnitMain and len(animations) == 0:
             obj_menuUnitMain.update(area, current_unit)
             obj_menuUnitMain.draw(area)
 
@@ -288,6 +292,12 @@ def game_loop():
         if selected_unit:
             show_stats(area, selected_unit)
 
+
+        # Loop through any animations
+        for ani in animations:
+            ani.draw(area)
+            if ani.timer == ani.limit:
+                animations.remove(ani)
 
 
         # Update the display

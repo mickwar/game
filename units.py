@@ -1,4 +1,5 @@
 import pygame
+import random
 
 from clickTest import *
 from field import *
@@ -269,6 +270,7 @@ def show_stats(gameDisplay, unit):
             gameDisplay.screen.blit(textsurface, xy(n_vec[i], a_vec[i], b_vec[i]))
 
 
+
 # Get unit next in turn order
 # This is a recursive function that continually increases each units' CT by its
 # base speed until there is a unit with CT >= 100. The unit with the highest CT
@@ -291,8 +293,38 @@ def unit_order(Units):
 # Ceiling function
 def ceil(a, b = 1): return int(-(-a // b))
 
+
+# Class to display amount of damage taken over a unit
+class dmgText():
+    def __init__(self, text, unit, delay = 0, limit = 21):
+        self.text = text
+        self.delay = delay
+        self.timer = 0
+        self.limit = limit
+        self.pos = (unit.x, unit.y)
+        #self.pos_current = gameDisplay.grid_to_pixel(self.pos[0], self.pos[1])
+        self.multiplier = random.randrange(800, 1200) / 1000.0
+        self.font = pygame.font.SysFont('Arial', 16)
+        self.textsurface = self.font.render(str(text), False, (255, 255, 255))
+
+    def update(self):
+        if self.delay > 0:
+            self.delay -= 1
+        else:
+            self.timer += 1
+
+    def draw(self, gameDisplay):
+        self.update()
+        if self.delay <= 0 and self.timer <= self.limit:
+            # Up and down centered
+            tmp = gameDisplay.grid_to_pixel(
+                self.pos[0] + 0.5,
+                self.pos[1] + 0.5 - max(0, (9 ** 2 - ((self.timer) - 9)**2) / 9.0 * self.multiplier) / gameDisplay.GRID_TO_PIXEL)
+            gameDisplay.screen.blit(self.textsurface, tmp)
+
+
 # Function for attacking a unit
-def func_attack(attacker, defender):
+def func_attack(attacker, defender, delay = 0):
     if defender.stat_shield > 0 and [] not in defender.weakness:
         p = 0.25
     if defender.stat_shield > 0 and [] in defender.weakness:
@@ -305,7 +337,8 @@ def func_attack(attacker, defender):
     p = 1.00
     dmg = ceil( (2*attacker.base_strength - defender.base_vitality) * p)
     defender.stat_hp -= max(0, dmg)
-    return defender
+    obj_dmgText = dmgText(str(dmg), defender, delay)
+    return defender, obj_dmgText
 
 # Different attack possibilities:
 # Shield > 0, not weak: 25% DMG
