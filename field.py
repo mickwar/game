@@ -20,7 +20,9 @@ RES = (1280, 720)
 
 class Field():
     def __init__(self, x, y, n = 0, map_width = RES[0], map_height = RES[1], side_height = 200):
-        self.GRID_TO_PIXEL = 50
+        self.zoom = [50, 56, 63, 72, 81, 92, 104, 117, 132, 150]
+        self.zoom_ind = 0
+        self.GRID_TO_PIXEL = self.zoom[self.zoom_ind]
         self.pixel_offset = (0, 0)
         self.scroll_flag = False
         self.map_w = map_width
@@ -50,6 +52,14 @@ class Field():
         if event.type == pygame.MOUSEBUTTONUP:
             if event.button == 3:
                 self.scroll_flag = False
+
+        if event.type == pygame.MOUSEBUTTONUP:
+            if event.button == 4:
+                self.zoom_ind = min(len(self.zoom)-1, self.zoom_ind + 1)
+                self.GRID_TO_PIXEL = self.zoom[self.zoom_ind]
+            if event.button == 5:
+                self.zoom_ind = max(0, self.zoom_ind - 1)
+                self.GRID_TO_PIXEL = self.zoom[self.zoom_ind]
 
         if event.type == pygame.MOUSEMOTION:
             if self.scroll_flag:
